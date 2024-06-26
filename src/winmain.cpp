@@ -17,6 +17,7 @@
  along with GUP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+
 #include "../ZipLib/ZipFile.h"
 #include "../ZipLib/utils/stream_utils.h"
 
@@ -51,6 +52,8 @@ static bool stopDL = false;
 static wstring msgBoxTitle = L"";
 static wstring abortOrNot = L"";
 static wstring proxySrv = L"0.0.0.0";
+static wstring proxyAuth = L"ANY";
+static wstring proxyUserPass = L":";
 static long proxyPort  = 0;
 static wstring winGupUserAgent = L"WinGup/";
 static wstring dlFileName = L"";
@@ -84,6 +87,7 @@ gup -unzipTo [-clean] FOLDER_TO_ACTION ZIP_URL\r\
 \r\
     --help : Show this help message (and quit program).\r\
     -options : Show the proxy configuration dialog (and quit program).\r\
+               You may need to run in administrator console to store the options.\r\
     -v : Launch GUP with VERSION_VALUE.\r\
          VERSION_VALUE is the current version number of program to update.\r\
          If you pass the version number as the argument,\r\
@@ -97,6 +101,50 @@ gup -unzipTo [-clean] FOLDER_TO_ACTION ZIP_URL\r\
     ZIP_URL: The URL to download zip file.\r\
     FOLDER_TO_ACTION: The folder where we clean or/and unzip to.\r\
 	";
+
+class ProxyAuthType {
+		#define MAX_AUTH_TYPE 8
+private:
+	typedef struct { const unsigned long num; const wchar_t* text; } auth_t;
+		static const auth_t auth_conv[MAX_AUTH_TYPE];
+public:
+	static unsigned long getAuthNum(const wstring& text) {
+			// BASIC, DIGEST, NEGOTIATE, NTLM, AWS_SIGV4, ANY, ANYSAFE
+			for (int i = 0; i < MAX_AUTH_TYPE; ++i) {
+				if (text == auth_conv[i].text) {
+					return auth_conv[i].num;
+				}
+			}
+			return CURLAUTH_NONE;
+		}
+
+		static bool getAuthStr(unsigned long lAuth, wstring& text) {
+			// BASIC, DIGEST, NEGOTIATE, NTLM, AWS_SIGV4, ANY, ANYSAFE
+			for (int i = 0; i < MAX_AUTH_TYPE; ++i) {
+				if (lAuth == auth_conv[i].num) {
+					text = auth_conv[i].text;
+					return true;
+				}
+			}
+			return false;
+		}
+		static void fillComboBox(HWND hWnd) {
+			for (int i = 0; i < MAX_AUTH_TYPE; ++i) {
+				SendMessage(hWnd, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)auth_conv[i].text);
+			}
+		}
+};
+
+const ProxyAuthType::auth_t  ProxyAuthType::auth_conv[MAX_AUTH_TYPE] = {
+		  { CURLAUTH_NONE, L"NONE" },
+		  { CURLAUTH_NTLM, L"NTLM" },
+		  { CURLAUTH_BASIC, L"BASIC" },
+		  { CURLAUTH_DIGEST, L"DIGEST" },
+		  { CURLAUTH_NEGOTIATE, L"NEGOTIATE" },
+		  { CURLAUTH_AWS_SIGV4, L"AWS_SIGV4" },
+		  { CURLAUTH_ANYSAFE, L"ANYSAFE" },
+		  { CURLAUTH_ANY, L"ANY" }
+};
 
 class DlgIconHelper
 {
@@ -675,20 +723,26 @@ LRESULT CALLBACK proxyDlgProc(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM)
 
 	switch(Msg)
 	{
-		case WM_INITDIALOG:
+	case WM_INITDIALOG: {
+			HWND hCmb = GetDlgItem(hWndDlg, IDC_PROXY_AUTH);
+			ProxyAuthType::fillComboBox(hCmb);
 			::SetDlgItemText(hWndDlg, IDC_PROXYSERVER_EDIT, proxySrv.c_str());
 			::SetDlgItemInt(hWndDlg, IDC_PORT_EDIT, proxyPort, FALSE);
-			goToScreenCenter(hWndDlg);
-			return TRUE; 
+			::SetDlgItemText(hWndDlg, IDC_PROXY_AUTH, proxyAuth.c_str());
+			::SetDlgItemText(hWndDlg, IDC_PROXY_USER_PASS, proxyUserPass.c_str());
 
+			goToScreenCenter(hWndDlg);
+			return TRUE;
+		}
 		case WM_COMMAND:
 			switch(wParam)
 			{
 				case IDOK:
 				{
-					wchar_t proxyServer[MAX_PATH];
-					::GetDlgItemText(hWndDlg, IDC_PROXYSERVER_EDIT, proxyServer, MAX_PATH);
-					proxySrv = proxyServer;
+					wchar_t text[MAX_PATH];
+					::GetDlgItemText(hWndDlg, IDC_PROXYSERVER_EDIT, text, MAX_PATH); proxySrv = text;
+					::GetDlgItemText(hWndDlg, IDC_PROXY_AUTH, text, MAX_PATH);       proxyAuth = text;
+					::GetDlgItemText(hWndDlg, IDC_PROXY_USER_PASS, text, MAX_PATH);  proxyUserPass = text;
 					proxyPort = ::GetDlgItemInt(hWndDlg, IDC_PORT_EDIT, NULL, FALSE);
 					EndDialog(hWndDlg, 1);
 					return TRUE;
@@ -794,7 +848,7 @@ static DWORD WINAPI launchProgressBar(void *)
 	return 0;
 }
 
-bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring& sha2HashToCheck, pair<wstring, int> proxyServerInfo, bool isSilentMode, const pair<wstring, wstring>& stoppedMessage)
+bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring& sha2HashToCheck, const GupExtraOptions& extraOptions, bool isSilentMode, const pair<wstring, wstring>& stoppedMessage)
 {
 	FILE* pFile = _wfopen(destTo.c_str(), L"wb");
 	if (!pFile)
@@ -821,11 +875,19 @@ bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring
 		curl_easy_setopt(curl, CURLOPT_USERAGENT, ws2s(winGupUserAgent).c_str());
 		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer);
 
-		if (!proxyServerInfo.first.empty() && proxyServerInfo.second != -1)
+
+		if (extraOptions.hasProxySettings())
 		{
-			curl_easy_setopt(curl, CURLOPT_PROXY, ws2s(proxyServerInfo.first).c_str());
-			curl_easy_setopt(curl, CURLOPT_PROXYPORT, proxyServerInfo.second);
-			curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+			if (!extraOptions.getAuth().empty()) {
+				long lAuth = ProxyAuthType::getAuthNum(extraOptions.getAuth());
+				
+				curl_easy_setopt(curl, CURLOPT_PROXYAUTH, lAuth); // any method as proposed by proxy
+			}
+			if (!extraOptions.getUserPass().empty()) {
+				curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, ws2s(extraOptions.getUserPass()).c_str());
+			}
+			curl_easy_setopt(curl, CURLOPT_PROXY, ws2s(extraOptions.getProxyServer()).c_str());
+			curl_easy_setopt(curl, CURLOPT_PROXYPORT, extraOptions.getPort());
 		}
 		curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_ALLOW_BEAST | CURLSSLOPT_NO_REVOKE);
 
@@ -903,7 +965,7 @@ bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring
 	return true;
 }
 
-bool getUpdateInfo(const string& info2get, const GupParameters& gupParams, const GupExtraOptions& proxyServer, const wstring& customParam, const wstring& version)
+bool getUpdateInfo(const string& info2get, const GupParameters& gupParams, const GupExtraOptions& extraOptions, const wstring& customParam, const wstring& version)
 {
 	char errorBuffer[CURL_ERROR_SIZE] = { 0 };
 
@@ -959,13 +1021,19 @@ bool getUpdateInfo(const string& info2get, const GupParameters& gupParams, const
 		curl_easy_setopt(curl, CURLOPT_USERAGENT, ws2s(winGupUserAgent).c_str());
 		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer);
 
-		if (proxyServer.hasProxySettings())
+		if (extraOptions.hasProxySettings())
 		{
-			curl_easy_setopt(curl, CURLOPT_PROXY, ws2s(proxyServer.getProxyServer()).c_str());
-			curl_easy_setopt(curl, CURLOPT_PROXYPORT, proxyServer.getPort());
-			curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-		}
+			if (!extraOptions.getAuth().empty()) {
+				long lAuth = ProxyAuthType::getAuthNum(extraOptions.getAuth());
 
+				curl_easy_setopt(curl, CURLOPT_PROXYAUTH, lAuth); // any method as proposed by proxy
+			}
+			if (!extraOptions.getUserPass().empty()) {
+				curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, ws2s(extraOptions.getUserPass()).c_str());
+			}
+			curl_easy_setopt(curl, CURLOPT_PROXY, ws2s(extraOptions.getProxyServer()).c_str());
+			curl_easy_setopt(curl, CURLOPT_PROXYPORT, extraOptions.getPort());
+		}
 		curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_ALLOW_BEAST | CURLSSLOPT_NO_REVOKE);
 
 		res = curl_easy_perform(curl);
@@ -1285,7 +1353,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 				if (dlStopped == L"")
 					dlStopped = MSGID_DOWNLOADSTOPPED;
 
-				bool isSuccessful = downloadBinary(dlUrl, dlDest, sha256ToCheck, pair<wstring, int>(extraOptions.getProxyServer(), extraOptions.getPort()), true, pair<wstring, wstring>(dlStopped, gupParams.getMessageBoxTitle()));
+				bool isSuccessful = downloadBinary(dlUrl, dlDest, sha256ToCheck, extraOptions , true, pair<wstring, wstring>(dlStopped, gupParams.getMessageBoxTitle()));
 				if (isSuccessful)
 				{
 					isSuccessful = decompress(dlDest, destPath);
@@ -1344,10 +1412,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			{
 				proxySrv = extraOptions.getProxyServer();
 				proxyPort = extraOptions.getPort();
+				proxyAuth = extraOptions.getAuth();
+				proxyUserPass = extraOptions.getUserPass();
 			}
 			if (::DialogBox(hInst, MAKEINTRESOURCE(IDD_PROXY_DLG), NULL, reinterpret_cast<DLGPROC>(proxyDlgProc)))
-				extraOptions.writeProxyInfo(L"gupOptions.xml", proxySrv.c_str(), proxyPort);
-
+			{
+				extraOptions.setProxyServer(proxySrv);
+				extraOptions.setPort(proxyPort);
+				extraOptions.setAuth(proxyAuth);
+				extraOptions.setUserPass(proxyUserPass);
+				extraOptions.write();
+			}
 			return 0;
 		}
 
@@ -1472,7 +1547,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		if (dlStopped == L"")
 			dlStopped = MSGID_DOWNLOADSTOPPED;
 
-		bool dlSuccessful = downloadBinary(gupDlInfo.getDownloadLocation(), dlDest, L"", pair<wstring, int>(extraOptions.getProxyServer(), extraOptions.getPort()), isSilentMode, pair<wstring, wstring>(dlStopped, gupParams.getMessageBoxTitle()));
+		bool dlSuccessful = downloadBinary(gupDlInfo.getDownloadLocation(), dlDest, L"", extraOptions , isSilentMode, pair<wstring, wstring>(dlStopped, gupParams.getMessageBoxTitle()));
 
 		if (!dlSuccessful)
 		{
