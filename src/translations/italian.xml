@@ -3,14 +3,17 @@
     Copyright 2021 Don HO <don.h@free.fr>
 	
     This file is part of GUP for Notepad++
+
     GUP for Notepad++ is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
+
     GUP for Notepad++ is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with GUP.  If not, see <http://www.gnu.org/licenses/>.
 -->
@@ -19,10 +22,15 @@
 
 <GUP_NativeLangue name="Italian" version="5.1.3">
 	<PopupMessages>
+		<MSGID_UPDATETITLE content="Aggiornamento Notepad++" />
 		<MSGID_UPDATEAVAILABLE content="È disponibile un aggiornamento: scaricarlo?" />
 		<MSGID_VERSIONCURRENT  content="Versione corrente    :" />
 		<MSGID_VERSIONNEW      content="Versione disponibile :" />
-		
+		<MSGID_UPDATEYES content="Sì" />
+		<MSGID_UPDATEYESSILENT content="Sì (Silente)" />
+		<MSGID_UPDATENo content="No" />
+		<MSGID_UPDATENEVER content="Mai" />
+
 		<MSGID_DOWNLOADPAGE content="Vai alla pagina di download" />
 		<MSGID_MOREINFO content="maggiori informazioni" />
 		<!-- $MSGID_DOWNLOADPAGE$ and $MSGID_MOREINFO$ are place holders, don't translate them -->
