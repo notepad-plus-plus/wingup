@@ -20,16 +20,21 @@
 
 <!-- This file is optional.-->
 
-<GUP_NativeLangue name="Swedish" version="5.1.3">
+<GUP_NativeLangue name="Svenska" version="5.1.3">
 	<PopupMessages>
-		<MSGID_UPDATEAVAILABLE content="Ett uppdateringspaket är tillgängligt. Vill du ladda ned det?" />
-		<MSGID_VERSIONCURRENT  content="Nuvarande version :" />
-		<MSGID_VERSIONNEW      content="Tillgänglig version   :" />
+		<MSGID_UPDATETITLE content="Uppdatering av Notepad++ är tillgänglig" />
+		<MSGID_UPDATEAVAILABLE content="Ett uppdateringspaket är tillgängligt. Vill du ladda ned och installera det?" />
+		<MSGID_VERSIONCURRENT content="Nuvarande version :" />
+		<MSGID_VERSIONNEW content="Tillgänglig version   :" />
+		<MSGID_UPDATEYES content="Ja" />
+		<MSGID_UPDATEYESSILENT content="Ja (tyst)" />
+		<MSGID_UPDATENo content="Nej" />
+		<MSGID_UPDATENEVER content="Aldrig" />
 		
 		<MSGID_DOWNLOADPAGE content="Gå till nedladdningssidan" />
 		<MSGID_MOREINFO content="mer information" />
 		<!-- $MSGID_DOWNLOADPAGE$ and $MSGID_MOREINFO$ are place holders, don't translate them -->
-		<MSGID_GOTODOWNLOADPAGETEXT content="Ingen uppdatering är tillgänglig&#xD;eller så har senaste versionen ännu inte utlösts för uppdatering ($MSGID_MOREINFO$)&#xD;&#xD;$MSGID_DOWNLOADPAGE$ för att uppdatera Notepad++ manuellt." />
+		<MSGID_GOTODOWNLOADPAGETEXT content="Det finns ingen tillgänglig uppdatering&#xD;eller så är den senaste versionen ännu inte tillgänglig för uppdatering ($MSGID_MOREINFO$)&#xD;&#xD;$MSGID_DOWNLOADPAGE$ för att uppdatera Notepad++ manuellt." />
 		
 		<MSGID_DOWNLOADSTOPPED content="Nedladdningen stoppades av användaren. Uppdateringen avbröts." />
 		<MSGID_CLOSEAPP content=" är öppen.&#xD;Uppdateringsprogrammet kommer att stänga den för att kunna bearbeta installationen.&#xD;Vill du fortsätta?" />
