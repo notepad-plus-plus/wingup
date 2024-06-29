@@ -20,17 +20,25 @@
 
 <!-- This file is optional.-->
 
-<GUP_NativeLangue name = "Русский">
+<GUP_NativeLangue name="Русский" version="5.1.3">
 	<PopupMessages>
-		<!-- <MSGID_NOUPDATE  content="No update is available." /> -->
-		<MSGID_NOUPDATE content="Нет доступных обновлений." />
-		<!-- <MSGID_UPDATEAVAILABLE  content="An update package is available, do you want to download it?" /> -->
-		<MSGID_UPDATEAVAILABLE content="Доступно обновление. Хотите загрузить его?" />
-		<!-- <MSGID_DOWNLOADSTOPPED  content="Download is stopped by user. Update is aborded." /> -->
+		<MSGID_UPDATETITLE content="Доступно обновление Notepad++" />
+		<MSGID_UPDATEAVAILABLE content="Доступен пакет обновления. Хотите загрузить и установить его?" />
+		<MSGID_VERSIONCURRENT content="Текущая версия   :" />
+		<MSGID_VERSIONNEW content="Доступная версия :" />
+		<MSGID_UPDATEYES content="Да" />
+		<MSGID_UPDATEYESSILENT content="Да (Без уведомлений)" />
+		<MSGID_UPDATENo content="Нет" />
+		<MSGID_UPDATENEVER content="Никогда" />
+		
+		<MSGID_DOWNLOADPAGE content="Перейти на страницу загрузки" />
+		<MSGID_MOREINFO content="больше информации" />
+		<!-- $MSGID_DOWNLOADPAGE$ and $MSGID_MOREINFO$ are place holders, don't translate them -->
+		<MSGID_GOTODOWNLOADPAGETEXT content="Нет доступных обновлений&#xD;или последняя версия еще не запущена для обновления ($MSGID_MOREINFO$)&#xD;&#xD;$MSGID_DOWNLOADPAGE$ для обновления Notepad++ вручную." />
+		
 		<MSGID_DOWNLOADSTOPPED content="Загрузка остановлена пользователем. Обновление отменено." />
-		<!-- <MSGID_CLOSEAPP  content=" is opened.&#xD;Updater will close it in order to process the installation.&#xD;Continue?" /> -->
-		<MSGID_CLOSEAPP content=" запущен.&#xD;Программа обновления закроет его, чтобы установить обновление.&#xD;Хотите продолжить?" />
-		<!-- <MSGID_ABORTORNOT  content="Do you want to abort update download?" /> -->
+		<MSGID_CLOSEAPP content=" запущен.&#xD;Программа обновления закроет его, чтобы продолжить установку.&#xD;Продолжить?" />
 		<MSGID_ABORTORNOT content="Отменить загрузку обновления?" />
+		<MSGID_UNZIPFAILED content="Невозможно разархивировать: операция не разрешена или распаковка не удалась." />
 	</PopupMessages>
 </GUP_NativeLangue>
