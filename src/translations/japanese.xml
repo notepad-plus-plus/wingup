@@ -23,9 +23,14 @@
 
 <GUP_NativeLangue name="Japanese" version="5.2.9">
 	<PopupMessages>
+		<MSGID_UPDATETITLE content="Notepad++ をアップデートできます" />
 		<MSGID_UPDATEAVAILABLE content="新しいバージョンが利用できます。ダウンロードし、インストールを行いますか？" />
-		<MSGID_VERSIONCURRENT  content="現在のバージョン：" />
-		<MSGID_VERSIONNEW      content="新しいバージョン：" />
+		<MSGID_VERSIONCURRENT content="現在のバージョン：" />
+		<MSGID_VERSIONNEW content="新しいバージョン：" />
+		<MSGID_UPDATEYES content="はい" />
+		<MSGID_UPDATEYESSILENT content="はい（ｻｲﾚﾝﾄ）" />
+		<MSGID_UPDATENo content="いいえ" />
+		<MSGID_UPDATENEVER content="自動更新ｵﾌ" />
 		
 		<MSGID_DOWNLOADPAGE content="ダウンロードページ" />
 		<MSGID_MOREINFO content="より詳しく" />
