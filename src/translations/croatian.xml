@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!--
-    Updated 7 December 2023 by Elvis Gambiraža (el.gambo@gmail.com)
+    Updated 30 June 2024 by Elvis Gambiraža (el.gambo@gmail.com)
 -->
 <!--
     Copyright 2021 Don HO <don.h@free.fr>
@@ -23,11 +23,16 @@
 
 <!-- This file is optional.-->
 
-<GUP_NativeLangue name="Hrvatski" version="5.1.3">
+<GUP_NativeLangue name="Hrvatski" version="5.2.9">
 	<PopupMessages>
-		<MSGID_UPDATEAVAILABLE content="Dostupan je paket ažuriranja, želite li ga preuzeti?" />
-		<MSGID_VERSIONCURRENT  content="Trenutna verzija je:" />
-		<MSGID_VERSIONNEW      content="Dostupna verzija je:" />
+		<MSGID_UPDATETITLE content="Notepad++ ažuriranje je dostupno" />
+		<MSGID_UPDATEAVAILABLE content="Dostupan je paket ažuriranja, želite li ga preuzeti i instalirati?" />
+		<MSGID_VERSIONCURRENT content="Trenutna verzija je:" />
+		<MSGID_VERSIONNEW content="Dostupna verzija je:" />
+		<MSGID_UPDATEYES content="Da" />
+		<MSGID_UPDATEYESSILENT content="Da (tiho)" />
+		<MSGID_UPDATENo content="Ne" />
+		<MSGID_UPDATENEVER content="Nikad" />
 		
 		<MSGID_DOWNLOADPAGE content="idite na stranicu za preuzimanje" />
 		<MSGID_MOREINFO content="više informacija" />
