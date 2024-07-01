@@ -2,7 +2,7 @@
 <!-- ========================================== [ Bulgarian localization ] ===\
 |
 |   Translators:.....: 2023–yyyy – Rusi Dimitrov;
-|   Last revision:...: 15.02.2023 by Rusi Dimitrov <npp[at]rdd.anonaddy.com>
+|   Last revision:...: 01.07.2024 by Rusi Dimitrov <npp[at]rdd.anonaddy.com>
 |
 \========================================================================== -->
 <!--
@@ -28,9 +28,14 @@
 
 <GUP_NativeLangue name="Български">
 	<PopupMessages>
-		<MSGID_UPDATEAVAILABLE content="Наличен е пакет за актуализация, искате ли да го изтеглите?"/>
-		<MSGID_VERSIONCURRENT  content="Текущата версия е  :"/>
-		<MSGID_VERSIONNEW      content="Наличната версия е :"/>
+		<MSGID_UPDATETITLE content="Налична актуализация на Notepad++"/>
+		<MSGID_UPDATEAVAILABLE content="Наличен е пакет за актуализация, искате ли да го изтеглите и инсталирате?"/>
+		<MSGID_VERSIONCURRENT content="Текущата версия е  :"/>
+		<MSGID_VERSIONNEW content="Наличната версия е :"/>
+		<MSGID_UPDATEYES content="Да"/>
+		<MSGID_UPDATEYESSILENT content="Да (тихо)" />
+		<MSGID_UPDATENo content="Не"/>
+		<MSGID_UPDATENEVER content="Никога"/>
 		
 		<MSGID_DOWNLOADPAGE content="Отидете на страницата за изтегляне"/>
 		<MSGID_MOREINFO content="още инфо"/>
@@ -38,7 +43,7 @@
 		<MSGID_GOTODOWNLOADPAGETEXT content="Няма налична актуализация или най-новата версия все още не е задействана за актуализация ($MSGID_MOREINFO$).
 
 $MSGID_DOWNLOADPAGE$ за да актуализирате Notepad++ ръчно."/>
-		
+
 		<MSGID_DOWNLOADSTOPPED content="Изтеглянето е спряно от потребителя. Актуализацията е прекъсната." />
 		<MSGID_CLOSEAPP content=" стартиран.
 Актуализаторът ще го затвори, за да извърши инсталацията.
