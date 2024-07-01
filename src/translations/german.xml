@@ -23,14 +23,26 @@
 <GUP_NativeLangue name = "Deutsch">
 	<PopupMessages>
 
-		<!-- <MSGID_UPDATEAVAILABLE content="An update package is available, do you want to download it?" /> -->
-		<MSGID_UPDATEAVAILABLE content="Ein Update ist verfügbar. Möchten Sie es herunterladen?" />
+		<!-- <MSGID_UPDATEAVAILABLE content="An update package is available, do you want to download and install it?" /> -->
+		<MSGID_UPDATEAVAILABLE content="Ein Update ist verfügbar. Möchten Sie es herunterladen und installieren?" />
 
 		<!-- <MSGID_VERSIONCURRENT content="Current version is   :" /> -->
 		<MSGID_VERSIONCURRENT content="Aktuelle Version:" />
 
 		<!-- <MSGID_VERSIONNEW content="Available version is :" /> -->
 		<MSGID_VERSIONNEW content="Verfügbare Version:" />
+
+		<!-- <MSGID_UPDATEYES content="Yes" /> -->
+		<MSGID_UPDATEYES content="Ja" />
+
+		<!-- <MSGID_UPDATEYESSILENT content="Yes (Silent)" /> -->
+		<MSGID_UPDATEYESSILENT content="Ja (ohne Rückfrage)" />
+
+		<!-- <MSGID_UPDATENo content="No" /> -->
+		<MSGID_UPDATENo content="Nein" />
+
+		<!-- <MSGID_UPDATENEVER content="Never" /> -->
+		<MSGID_UPDATENEVER content="Niemals" />
 
 		<!-- <MSGID_DOWNLOADPAGE content="Go to the download page" /> -->
 		<MSGID_DOWNLOADPAGE content="Die Download-Seite öffnen" />
