@@ -75,12 +75,20 @@ class GupExtraOptions : public XMLTool {
 public:
 	GupExtraOptions(const wchar_t * xmlFileName);
 	const std::wstring & getProxyServer() const { return _proxyServer;};
-	long getPort() const { return _port;};
-	bool hasProxySettings() const {return ((!_proxyServer.empty()) && (_port != -1));};
-	void writeProxyInfo(const wchar_t *fn, const wchar_t *proxySrv, long port);
+	void setProxyServer(const std::wstring& s) { _proxyServer = s; };
+	long getPort() const { return _port; };
+	void setPort(long l) { _port = l; };
+	bool hasProxySettings() const {return ((!_proxyServer.empty()) && (_port != -1)); };
+	void write();
+	const std::wstring& getAuth() const { return _proxyAuth; };
+	void setAuth(const std::wstring& s) { _proxyAuth = s; };
+	const std::wstring& getUserPass() const { return _proxyUserPass; };
+	void setUserPass(const std::wstring& s) { _proxyUserPass = s; };
 
 private:
 	std::wstring _proxyServer;
+	std::wstring _proxyAuth;
+	std::wstring _proxyUserPass;
 	long _port = -1;
 };
 
@@ -94,7 +102,7 @@ public:
 	bool doesNeed2BeUpdated() const {return _need2BeUpdated;};
 
 private:
-	bool _need2BeUpdated;
+	bool _need2BeUpdated = false;
 	std::wstring _updateVersion;
 	std::wstring _updateLocation;
 };

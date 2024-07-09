@@ -995,6 +995,8 @@ public:
 	{
         value = documentName;
 		error = false;
+		errorId = 0;
+		tabsize = 4;
 	}
 	#endif
 

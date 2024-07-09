@@ -289,6 +289,30 @@ GupExtraOptions::GupExtraOptions(const wchar_t * xmlFileName)
 			}
 		}
 
+		TiXmlNode *authNode = proxyNode->FirstChildElement("auth");
+		if (authNode)
+		{
+			TiXmlNode *auth = authNode->FirstChild();
+			if (auth)
+			{
+				const char *val = auth->Value();
+				if (val)
+					_proxyAuth = s2ws(val);
+			}
+		}
+
+		TiXmlNode *userpwdNode = proxyNode->FirstChildElement("userpwd");
+		if (userpwdNode)
+		{
+			TiXmlNode *userpwd = userpwdNode->FirstChild();
+			if (userpwd)
+			{
+				const char *val = userpwd->Value();
+				if (val)
+					_proxyUserPass = s2ws(val);
+			}
+		}
+
 		TiXmlNode *portNode = proxyNode->FirstChildElement("port");
 		if (portNode)
 		{
@@ -303,19 +327,22 @@ GupExtraOptions::GupExtraOptions(const wchar_t * xmlFileName)
 	}
 }
 
-void GupExtraOptions::writeProxyInfo(const wchar_t* fn, const wchar_t* proxySrv, long port)
+void GupExtraOptions::write()
 {
-	TiXmlDocument newProxySettings(ws2s(fn).c_str());
-	TiXmlNode *root = newProxySettings.InsertEndChild(TiXmlElement("GUPOptions"));
+	_xmlDoc.Clear();
+	TiXmlNode *root = _xmlDoc.InsertEndChild(TiXmlElement("GUPOptions"));
 	TiXmlNode *proxy = root->InsertEndChild(TiXmlElement("Proxy"));
+	TiXmlNode *auth = proxy->InsertEndChild(TiXmlElement("auth"));
+	auth->InsertEndChild(TiXmlText(ws2s(_proxyAuth).c_str()));
+	TiXmlNode *userpwd = proxy->InsertEndChild(TiXmlElement("userpwd"));
+	userpwd->InsertEndChild(TiXmlText(ws2s(_proxyUserPass).c_str()));
 	TiXmlNode *server = proxy->InsertEndChild(TiXmlElement("server"));
-	server->InsertEndChild(TiXmlText(ws2s(proxySrv).c_str()));
+	server->InsertEndChild(TiXmlText(ws2s(_proxyServer).c_str()));
 	TiXmlNode *portNode = proxy->InsertEndChild(TiXmlElement("port"));
 	char portStr[10];
-	sprintf(portStr, "%d", port);
+	sprintf(portStr, "%d", _port);
 	portNode->InsertEndChild(TiXmlText(portStr));
-
-	newProxySettings.SaveFile();
+	_xmlDoc.SaveFile();
 }
 
 std::wstring GupNativeLang::getMessageString(const std::string& msgID) const
