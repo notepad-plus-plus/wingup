@@ -20,8 +20,11 @@
 
 <!-- This file is optional.-->
 
-<GUP_NativeLangue name = "Deutsch">
+<GUP_NativeLangue name = "Deutsch" version="5.1.3>
 	<PopupMessages>
+
+		<!-- <MSGID_UPDATETITLE content="Notepad++ Update Available" /> -->
+		<MSGID_UPDATETITLE content="Notepad++ Update verfügbar" />
 
 		<!-- <MSGID_UPDATEAVAILABLE content="An update package is available, do you want to download and install it?" /> -->
 		<MSGID_UPDATEAVAILABLE content="Ein Update ist verfügbar. Möchten Sie es herunterladen und installieren?" />
