@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+    Copyright 2021 Don HO <don.h@free.fr>
+	
+    This file is part of GUP for Notepad++
+
+    GUP for Notepad++ is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    GUP for Notepad++ is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with GUP.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+<!-- This file is optional.-->
+<!-- Translated by Njardarheim-1337 (njardarheim@protonmail.com) -->
+
+<GUP_NativeLangue name="Norwegian" version="5.3.0">
+	<PopupMessages>
+		<MSGID_UPDATETITLE content="Notepad++ oppdatering tilgjengelig" />
+		<MSGID_UPDATEAVAILABLE content="En oppdateringspakke er tilgjengelig, vil du laste ned og installere den?" />
+		<MSGID_VERSIONCURRENT content="Gjeldende installert versjon&#x9;:"/>
+		<MSGID_VERSIONNEW content=" &#xD;Tilgjengelig versjon&#x9;:"/>
+		<MSGID_UPDATEYES content="Ja" />
+		<MSGID_UPDATEYESSILENT content="Ja (stille)" />
+		<MSGID_UPDATENo content="Nei" />
+		<MSGID_UPDATENEVER content="Aldri" />
+		
+		<MSGID_DOWNLOADPAGE content="Gå til nedlastingssiden" />
+		<MSGID_MOREINFO content="mer informasjon" />
+		<!-- $MSGID_DOWNLOADPAGE$ and $MSGID_MOREINFO$ are place holders, don't translate them -->
+		<MSGID_GOTODOWNLOADPAGETEXT content="Ingen oppdatering er tilgjengelig&#xD;eller den nyeste versjonen er ikke sluppet for oppdatering enda ($MSGID_MOREINFO$)&#xD;&#xD;$MSGID_DOWNLOADPAGE$ for å oppdatere Notepad++ manuelt." />
+		
+		<MSGID_DOWNLOADSTOPPED content="Nedlastingen er stoppet av brukeren. Oppdateringen avbrytes." />
+		<MSGID_CLOSEAPP content=" er åpnet.&#xD;Oppdatereren vil lukke den for å behandle installasjonen.&#xD;Fortsette?" />
+		<MSGID_ABORTORNOT content="Vil du avbryte nedlasting av oppdatering?" />
+		<MSGID_UNZIPFAILED content="Kan ikke unzippe: Operasjon ikke tillatt eller dekompresjon mislyktes" />
+	</PopupMessages>
+</GUP_NativeLangue>
