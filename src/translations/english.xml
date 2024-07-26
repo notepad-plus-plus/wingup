@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!--
-    Copyright 2021 Don HO <don.h@free.fr>
+    Copyright 2024 Don HO <don.h@free.fr>
 	
     This file is part of GUP for Notepad++
 
@@ -20,12 +20,12 @@
 
 <!-- This file is optional.-->
 
-<GUP_NativeLangue name="English" version="5.1.3">
+<GUP_NativeLangue name="English" version="5.3.0">
 	<PopupMessages>
-		<MSGID_UPDATETITLE content="Notepad++ Update Available" />
+		<MSGID_UPDATETITLE content="Notepad++ Update" />
 		<MSGID_UPDATEAVAILABLE content="An update package is available, do you want to download and install it?" />
-		<MSGID_VERSIONCURRENT content="Current version is   :" />
-		<MSGID_VERSIONNEW content="Available version is :" />
+		<MSGID_VERSIONCURRENT content="Current version installed is &#x9;:" />
+		<MSGID_VERSIONNEW content=" &#xD;Last available version is    &#x9;:" />
 		<MSGID_UPDATEYES content="Yes" />
 		<MSGID_UPDATEYESSILENT content="Yes (Silent)" />
 		<MSGID_UPDATENo content="No" />
