@@ -77,9 +77,9 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     LTEXT "An update package is available, do you want to download and install it?",IDC_YESNONEVERMSG,15,15,250,50
     PUSHBUTTON      "Yes",IDYES,27,70,50,14
-    PUSHBUTTON      "Yes (Silent)",IDOK,82,70,50,14
-    PUSHBUTTON      "No",IDNO,136,70,50,14
-    PUSHBUTTON      "Never",IDCANCEL,190,70,50,14
+    PUSHBUTTON      "Yes (Silent)",IDOK,80,70,56,14
+    PUSHBUTTON      "No",IDNO,138,70,50,14
+    PUSHBUTTON      "Never",IDCANCEL,191,70,50,14
 END
 
 IDD_UPDATE_DLG DIALOGEX 0, 0, 200, 110
