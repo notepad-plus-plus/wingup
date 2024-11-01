@@ -22,18 +22,18 @@
 
 <!--
     History of Corsican translation for wingup:
-		- Updated on June 29th, 2024 for version 5.2.9 by Patriccollu di Santa Maria è Sichè
+		- Updated on November 1st, 2024 for version 5.3.1 by Patriccollu di Santa Maria è Sichè
 		- Created on February 13th, 2023 for version 5.2.4 by Patriccollu di Santa Maria è Sichè
 
     The latest update is available here:
 	https://github.com/notepad-plus-plus/wingup/blob/master/src/translations/corsican.xml
 -->
 
-<GUP_NativeLangue name="Corsican" version="5.2.9">
+<GUP_NativeLangue name="Corsican" version="5.3.1">
 	<PopupMessages>
 		<MSGID_UPDATETITLE content="Messa à livellu di Notepad++ dispunibule"/>
-		<MSGID_UPDATEAVAILABLE content="Un pacchettu di messa à livellu hè dispunibule, vulete scaricalla è installalla ?"/>
-		<MSGID_VERSIONCURRENT content="A versione attuale hè     :"/>
+		<MSGID_UPDATEAVAILABLE content="Un pacchettu di messa à livellu hè dispunibule, vulete scaricallu è installallu ?"/>
+		<MSGID_VERSIONCURRENT content="A versione attuale hè     :"/>
 		<MSGID_VERSIONNEW content="A versione dispunibule hè :"/>
 		<MSGID_UPDATEYES content="Sì"/>
 		<MSGID_UPDATEYESSILENT content="Sì (silenziosu)"/>
@@ -43,7 +43,7 @@
 		<MSGID_DOWNLOADPAGE content="Andà à a pagina di scaricamentu"/>
 		<MSGID_MOREINFO content="per sapene di più"/>
 		<!-- $MSGID_DOWNLOADPAGE$ and $MSGID_MOREINFO$ are place holders, don't translate them -->
-		<MSGID_GOTODOWNLOADPAGETEXT content="Alcuna messa à livellu ùn hè dispunibule&#xD;o a versione più recente ùn hè ancu pronta per esse scaricata ($MSGID_MOREINFO$)&#xD;&#xD;$MSGID_DOWNLOADPAGE$ per mette à livellu Notepad++ manualmente."/>
+		<MSGID_GOTODOWNLOADPAGETEXT content="Alcuna messa à livellu ùn hè dispunibule&#xD;o a versione più recente ùn hè ancu pronta à esse scaricata ($MSGID_MOREINFO$)&#xD;&#xD;$MSGID_DOWNLOADPAGE$ per mette à livellu Notepad++ manualmente."/>
 		
 		<MSGID_DOWNLOADSTOPPED content="U scaricamentu hè statu interrottu da l’utilizatore. A messa à livellu hè abbandunata."/>
 		<MSGID_CLOSEAPP content=" hè apertu.&#xD;U rinnuvadore hà da chjodelu per lancià l’installazione.&#xD;Cuntinuà ?"/>
