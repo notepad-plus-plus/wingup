@@ -27,7 +27,7 @@
 		<MSGID_VERSIONCURRENT content="Versión actual:"/>
 		<MSGID_VERSIONNEW content="Versión disponible:"/>
 		<MSGID_UPDATEYES content="Sí"/>
-		<MSGID_UPDATEYESSILENT content="Sí (sin sonido)"/>
+		<MSGID_UPDATEYESSILENT content="Sí (sin intervención)"/>
 		<MSGID_UPDATENo content="No"/>
 		<MSGID_UPDATENEVER content="Nunca"/>
 		
