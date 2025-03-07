@@ -13,10 +13,10 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Add nmake
       if: matrix.build_platform == 'ARM64'
@@ -44,21 +44,21 @@ jobs:
 
     - name: Archive artifacts for x64
       if: matrix.build_platform == 'x64'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
           name: gup_exe_x64
           path: bin64\
 
     - name: Archive artifacts for x86
       if: matrix.build_platform == 'x86'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
           name: gup_exe_x86
           path: bin\
 
     - name: Archive artifacts for ARM64
       if: matrix.build_platform == 'ARM64'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
           name: gup_exe_arm64
           path: binarm64\
