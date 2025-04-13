@@ -25,6 +25,7 @@
 #include <windows.h>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <commctrl.h>
 #include <shlobj_core.h>
 #include "resource.h"
@@ -35,6 +36,20 @@
 
 #define CURL_STATICLIB
 #include "../curl/include/curl/curl.h"
+
+#define GUP_LOG_FILENAME L"c:\\tmp\\winup.log"
+
+#ifdef _DEBUG
+#define WRITE_LOG(fn, suffix, log) writeLog(fn, suffix, log);
+#else
+#define WRITE_LOG(fn, suffix, log)
+#endif
+
+// when defined, GUP will try to wait for the maintained app exit before proceeding to a scheduled op
+#define MAINTAINED_APP_RUNNING_BEHIND_TRY_TO_WAIT
+// when undefined, GUP ops will try to proceed even after an unsuccessful waiting for the maintained app exit
+// (there are also ops for which it is absolutely ok)
+//#define MAINTAINED_APP_RUNNING_BEHIND_DO_NOT_OPERATE
 
 using namespace std;
 
@@ -144,14 +159,14 @@ public:
 };
 DlgIconHelper dlgIconHelper;
 
-void writeLog(const wchar_t *logFileName, const wchar_t *logSuffix, const wchar_t *log2write)
+void writeLog(const wchar_t* logFileName, const wchar_t* logSuffix, const wchar_t* log2write)
 {
-	FILE *f = _wfopen(logFileName, L"a+");
+	FILE* f = _wfopen(logFileName, L"a+, ccs=UTF-16LE");
 	if (f)
 	{
 		wstring log = logSuffix;
 		log += log2write;
-		log += '\n';
+		log += L'\n';
 		fwrite(log.c_str(), sizeof(log.c_str()[0]), log.length(), f);
 		fflush(f);
 		fclose(f);
@@ -322,6 +337,12 @@ bool deleteFileOrFolder(const wstring& f2delete)
 	fileOpStruct.lpszProgressTitle = NULL;
 
 	int res = SHFileOperation(&fileOpStruct);
+	if (res != 0)
+	{
+		// beware that some of the SHFileOperation error codes are not the standard WIN32 ones
+		// (e.g. 124 (0x7C) here means DE_INVALIDFILES and not the usual ERROR_INVALID_LEVEL)
+		WRITE_LOG(GUP_LOG_FILENAME, L"deleteFileOrFolder, SHFileOperation failed with error code: ", std::to_wstring(res).c_str());
+	}
 
 	delete[] actionFolder;
 	return (res == 0);
@@ -1109,15 +1130,23 @@ std::wstring productVersionToFileVersion(const std::wstring& productVersion)
 	return fileVersion;
 }
 
-#ifdef _DEBUG
-#define WRITE_LOG(fn, suffix, log) writeLog(fn, suffix, log);
-#else
-#define WRITE_LOG(fn, suffix, log)
-#endif
+bool isAppProcess(const wchar_t* wszAppMutex)
+{
+	HANDLE hAppMutex = ::OpenMutexW(SYNCHRONIZE, false, wszAppMutex);
+	if (hAppMutex)
+	{
+		::CloseHandle(hAppMutex);
+		return true;
+	}
+	
+	return false;
+}
 
 // Definition from Notepad++
 #define NPPMSG  (WM_USER + 1000)
 #define NPPM_DISABLEAUTOUPDATE (NPPMSG + 95) // 2119 in decimal
+#define APP_MUTEX L"nppInstance"
+
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 {
@@ -1163,10 +1192,59 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		return 0;
 	}
 
-	WRITE_LOG(L"c:\\tmp\\winup.log", L"lpszCmdLine: ", lpszCmdLine);
-	
+	// 1st log msg, put there also the newline separator in front
+	WRITE_LOG(GUP_LOG_FILENAME, L"\nlpszCmdLine: ", lpszCmdLine);
+
 	GupExtraOptions extraOptions(L"gupOptions.xml");
 	GupNativeLang nativeLang("nativeLang.xml");
+
+#ifdef MAINTAINED_APP_RUNNING_BEHIND_TRY_TO_WAIT
+	if (isAppProcess(APP_MUTEX))
+	{
+		std::wstringstream wss;
+		wss << L"Maintained app with mutex \"" << APP_MUTEX << L"\" is still running.";
+		WRITE_LOG(GUP_LOG_FILENAME, L"APP_MUTEX exists: ", wss.str().c_str());
+
+		// wait for the Notepad++ app exit but max dwWaitMax ms
+		// 
+		// Note - Notepad++ mutex handling way:
+		// - it does not store its created mutex HANDLE and does not set the CreateMutex 2nd bInitialOwner param (FALSE used)
+		// - instead, it lets the system close that mutex HANDLE automatically when its last process instance terminates
+		//   (mutex object is destroyed when its last opened HANDLE has been closed...)
+		// - so waiting for the signaled state (not owned by any thread) of the Notepad++ mutex as a sync-method is not possible
+		// 
+		// - the used waiting method below is chosen on purpose (not using FindWindow/GetWindowThreadProcessId/OpenProcess/WaitForSingleObject way)
+		//   as the FindWindow can be unreliable in this case (the main app wnd may not exist at this time, but the app process
+		//   may still exist and e.g. locks its loaded plugins...)
+		const DWORD dwWaitMax = 5000;
+		const DWORD dwWaitStep = 250;
+		DWORD dwWaited = 0;
+		do
+		{
+			::Sleep(dwWaitStep);
+			dwWaited += dwWaitStep;
+		} while (isAppProcess(APP_MUTEX) && (dwWaited < dwWaitMax));
+
+		if (dwWaited < dwWaitMax)
+		{
+			WRITE_LOG(GUP_LOG_FILENAME, L"Waiting for the app-exit succeeded: ", L"Ok, maintained app is no longer running.");
+		}
+		else
+		{
+#ifdef MAINTAINED_APP_RUNNING_BEHIND_DO_NOT_OPERATE
+			if (!gupParams.isSilentMode() || isVerbose)
+			{
+				std::wstring wstrMsg = wss.str() + L"\n\nGUP operations are not allowed with that app running behind, aborting!";
+				::MessageBoxW(NULL, wstrMsg.c_str(), L"GUP Ops Aborted", MB_OK | MB_ICONSTOP);
+			}
+			return 0;
+#else
+			WRITE_LOG(GUP_LOG_FILENAME, L"Waiting for the app-exit failed: ",
+				L"The maintained app seems to be still running but GUP will try to proceed anyway...");
+#endif
+		}
+	}
+#endif // #ifdef MAINTAINED_APP_RUNNING_BEHIND_TRY_TO_WAIT
 
 	//
 	// Plugins Updater
@@ -1180,7 +1258,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	{
 		if (nbParam < 3)
 		{
-			WRITE_LOG(L"c:\\tmp\\winup.log", L"-1 in plugin updater's part - if (isCleanUp && !isUnzip) // remove only: ", L"nbParam < 3");
+			WRITE_LOG(GUP_LOG_FILENAME, L"-1 in plugin updater's part - if (isCleanUp && !isUnzip) // remove only: ", L"nbParam < 3");
 			return -1;
 		}
 		wstring prog2Launch = params[0];
@@ -1213,7 +1291,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	{
 		if (nbParam < 3)
 		{
-			WRITE_LOG(L"c:\\tmp\\winup.log", L"-1 in plugin updater's part - if (isCleanUp && isUnzip) // update: ", L"nbParam < 3");
+			WRITE_LOG(GUP_LOG_FILENAME, L"-1 in plugin updater's part - if (isCleanUp && isUnzip) // update: ", L"nbParam < 3");
 			return -1;
 		}
 		wstring prog2Launch = params[0];
@@ -1375,7 +1453,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 
 		if (!getUpdateInfoSuccessful)
 		{
-			WRITE_LOG(L"c:\\tmp\\winup.log", L"return -1 in Npp Updater part: ", L"getUpdateInfo func failed.");
+			WRITE_LOG(GUP_LOG_FILENAME, L"return -1 in Npp Updater part: ", L"getUpdateInfo func failed.");
 			return -1;
 		}
 
@@ -1476,7 +1554,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 
 		if (!dlSuccessful)
 		{
-			WRITE_LOG(L"c:\\tmp\\winup.log", L"return -1 in Npp Updater part: ", L"downloadBinary func failed.");
+			WRITE_LOG(GUP_LOG_FILENAME, L"return -1 in Npp Updater part: ", L"downloadBinary func failed.");
 			return -1;
 		}
 
@@ -1500,7 +1578,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		if (pFile != NULL)
 			fclose(pFile);
 
-		WRITE_LOG(L"c:\\tmp\\winup.log", L"return -1 in Npp Updater part, exception: ", s2ws(ex.what()).c_str());
+		WRITE_LOG(GUP_LOG_FILENAME, L"return -1 in Npp Updater part, exception: ", s2ws(ex.what()).c_str());
 		return -1;
 	}
 	catch (...)
@@ -1511,7 +1589,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		if (pFile != NULL)
 			fclose(pFile);
 
-		WRITE_LOG(L"c:\\tmp\\winup.log", L"return -1 in Npp Updater part, exception: ", L"Unknown Exception");
+		WRITE_LOG(GUP_LOG_FILENAME, L"return -1 in Npp Updater part, exception: ", L"Unknown Exception");
 		return -1;
 	}
 }
