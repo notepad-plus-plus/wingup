@@ -45,11 +45,6 @@
 #define WRITE_LOG(fn, suffix, log)
 #endif
 
-// when defined, GUP will try to wait for the maintained app exit before proceeding to a scheduled op
-#define MAINTAINED_APP_RUNNING_BEHIND_TRY_TO_WAIT
-// when undefined, GUP ops will try to proceed even after an unsuccessful waiting for the maintained app exit
-// (there are also ops for which it is absolutely ok)
-//#define MAINTAINED_APP_RUNNING_BEHIND_DO_NOT_OPERATE
 
 using namespace std;
 
@@ -1198,7 +1193,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	GupExtraOptions extraOptions(L"gupOptions.xml");
 	GupNativeLang nativeLang("nativeLang.xml");
 
-#ifdef MAINTAINED_APP_RUNNING_BEHIND_TRY_TO_WAIT
 	if (isAppProcess(APP_MUTEX))
 	{
 		std::wstringstream wss;
@@ -1227,24 +1221,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 
 		if (dwWaited < dwWaitMax)
 		{
+			// ok
 			WRITE_LOG(GUP_LOG_FILENAME, L"Waiting for the app-exit succeeded: ", L"Ok, maintained app is no longer running.");
 		}
 		else
 		{
-#ifdef MAINTAINED_APP_RUNNING_BEHIND_DO_NOT_OPERATE
-			if (!gupParams.isSilentMode() || isVerbose)
-			{
-				std::wstring wstrMsg = wss.str() + L"\n\nGUP operations are not allowed with that app running behind, aborting!";
-				::MessageBoxW(NULL, wstrMsg.c_str(), L"GUP Ops Aborted", MB_OK | MB_ICONSTOP);
-			}
-			return 0;
-#else
+			// bad but there are also ops for which it is absolutely ok, so try to proceed
 			WRITE_LOG(GUP_LOG_FILENAME, L"Waiting for the app-exit failed: ",
 				L"The maintained app seems to be still running but GUP will try to proceed anyway...");
-#endif
 		}
 	}
-#endif // #ifdef MAINTAINED_APP_RUNNING_BEHIND_TRY_TO_WAIT
 
 	//
 	// Plugins Updater
