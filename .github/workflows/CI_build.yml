@@ -30,6 +30,9 @@ jobs:
       with:
           arch: ${{ matrix.build_platform }}
 
+    - name: Set acknowledgment flag
+      run: set WINBUILD_ACKNOWLEDGE_DEPRECATED=yes
+
     - name: nmake libcurl
       working-directory: curl/winbuild
       run: |
