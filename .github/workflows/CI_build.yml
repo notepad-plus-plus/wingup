@@ -34,8 +34,8 @@ jobs:
       working-directory: curl/winbuild
       run: |
            set WINBUILD_ACKNOWLEDGE_DEPRECATED=yes
-           nmake /f Makefile.vc mode=dll vc=15 RTLIBCFG=static           MACHINE="${{ matrix.build_platform }}"
-           nmake /f Makefile.vc mode=dll vc=15 RTLIBCFG=static DEBUG=yes MACHINE="${{ matrix.build_platform }}"
+           nmake /f Makefile.vc mode=dll vc=15 RTLIBCFG=static WINBUILD_ACKNOWLEDGE_DEPRECATED=yes           MACHINE="${{ matrix.build_platform }}"
+           nmake /f Makefile.vc mode=dll vc=15 RTLIBCFG=static WINBUILD_ACKNOWLEDGE_DEPRECATED=yes DEBUG=yes MACHINE="${{ matrix.build_platform }}"
 
     - name: MSBuild of GUP exe
       working-directory: vcproj
