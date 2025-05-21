@@ -36,9 +36,9 @@
 		<!-- $MSGID_DOWNLOADPAGE$ and $MSGID_MOREINFO$ are place holders, don't translate them -->
 		<MSGID_GOTODOWNLOADPAGETEXT content="Es ist kein Update verfügbar&#xD;oder die neueste Version wurde noch nicht für die Allgemeinheit freigegeben ($MSGID_MOREINFO$)&#xD;&#xD;$MSGID_DOWNLOADPAGE$ um Notepad++ manuell zu aktualisieren." />
 
-		<MSGID_DOWNLOADSTOPPED  content="Das Herunterladen wurde durch den Benutzer gestoppt. Das Update wurde abgebrochen." />
-		<MSGID_CLOSEAPP  content=" wird ausgeführt.&#xD;Der Updater wird die Anwendung beenden um die Installation vorzunehmen.&#xD;Fortfahren?" />
-		<MSGID_ABORTORNOT  content="Möchten Sie das Herunterladen des Updates wirklich abbrechen?" />
+		<MSGID_DOWNLOADSTOPPED content="Das Herunterladen wurde durch den Benutzer gestoppt. Das Update wurde abgebrochen." />
+		<MSGID_CLOSEAPP content=" wird ausgeführt.&#xD;Der Updater wird die Anwendung beenden um die Installation vorzunehmen.&#xD;Fortfahren?" />
+		<MSGID_ABORTORNOT content="Möchten Sie das Herunterladen des Updates wirklich abbrechen?" />
 		<MSGID_UNZIPFAILED content="Entpacken fehlgeschlagen: Fehlende Benutzerrechte oder Archiv defekt" />
 	</PopupMessages>
 </GUP_NativeLangue>
