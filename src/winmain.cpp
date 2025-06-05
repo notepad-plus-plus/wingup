@@ -659,7 +659,7 @@ LRESULT CALLBACK yesNoNeverDlgProc(HWND hWndDlg, UINT message, WPARAM wParam, LP
 					::SetDlgItemText(hWndDlg, IDNO, pUaDlgStrs->_noButton.c_str());
 
 				if (!g_hAppWnd)
-					::EnableWindow(::GetDlgItem(hWndDlg, IDCANCEL), FALSE); // no app-wnd to sent the update disabling message signal
+					::EnableWindow(::GetDlgItem(hWndDlg, IDCANCEL), FALSE); // no app-wnd to sent the updates disabling message signal
 			}
 
 			goToScreenCenter(hWndDlg);
@@ -1025,7 +1025,7 @@ int runInstaller(const wstring& app2runPath, const wstring& binWindowsClassName,
 	}
 
 	// execute the installer
-	unsigned long long result = (unsigned long long)::ShellExecute(NULL, L"open", app2runPath.c_str(), nsisSilentInstallParam.c_str(), L".", SW_SHOW);
+	intptr_t result = (intptr_t)::ShellExecute(NULL, L"open", app2runPath.c_str(), nsisSilentInstallParam.c_str(), L".", SW_SHOW);
 	if (result <= 32) // There's a problem (Don't ask me why, ask Microsoft)
 	{
 		WRITE_LOG(GUP_LOG_FILENAME, L"runInstaller, ShellExecute failed with error code: ", std::to_wstring(result).c_str());
