@@ -50,12 +50,13 @@ using namespace std;
 
 typedef vector<wstring> ParamVector;
 
-HINSTANCE hInst;
-HHOOK g_hMsgBoxHook;
+HINSTANCE g_hInst = nullptr;
+HHOOK g_hMsgBoxHook = nullptr;
+HWND g_hAppWnd = nullptr;
 
 DPIManager dpiManager;
-static HWND hProgressDlg;
-static HWND hProgressBar;
+static HWND hProgressDlg = nullptr;
+static HWND hProgressBar = nullptr;
 static bool doAbort = false;
 static bool stopDL = false;
 static wstring msgBoxTitle = L"";
@@ -589,7 +590,7 @@ LRESULT CALLBACK progressBarDlgProc(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARA
 			int height = dpiManager.scaleY(17);
 			hProgressBar = CreateWindowEx(0, PROGRESS_CLASS, NULL, WS_CHILD | WS_VISIBLE,
 				x, y, width, height,
-				hWndDlg, NULL, hInst, NULL);
+				hWndDlg, NULL, g_hInst, NULL);
 			SendMessage(hProgressBar, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
 			SendMessage(hProgressBar, PBM_SETSTEP, 1, 0);
 			DlgIconHelper::setIcon(hProgressDlg, appIconFile);
@@ -656,6 +657,9 @@ LRESULT CALLBACK yesNoNeverDlgProc(HWND hWndDlg, UINT message, WPARAM wParam, LP
 					::SetDlgItemText(hWndDlg, IDOK, pUaDlgStrs->_yesSilentButton.c_str());
 				if (!pUaDlgStrs->_noButton.empty())
 					::SetDlgItemText(hWndDlg, IDNO, pUaDlgStrs->_noButton.c_str());
+
+				if (!g_hAppWnd)
+					::EnableWindow(::GetDlgItem(hWndDlg, IDCANCEL), FALSE); // no app-wnd to sent the update disabling message signal
 			}
 
 			goToScreenCenter(hWndDlg);
@@ -806,7 +810,7 @@ LRESULT CALLBACK updateCheckDlgProc(HWND hWndDlg, UINT message, WPARAM wParam, L
 
 static DWORD WINAPI launchProgressBar(void *)
 {
-	::DialogBox(hInst, MAKEINTRESOURCE(IDD_PROGRESS_DLG), NULL, reinterpret_cast<DLGPROC>(progressBarDlgProc));
+	::DialogBox(g_hInst, MAKEINTRESOURCE(IDD_PROGRESS_DLG), NULL, reinterpret_cast<DLGPROC>(progressBarDlgProc));
 	return 0;
 }
 
@@ -998,24 +1002,21 @@ bool getUpdateInfo(const string& info2get, const GupParameters& gupParams, const
 	return true;
 }
 
-bool runInstaller(const wstring& app2runPath, const wstring& binWindowsClassName, const wstring& closeMsg, const wstring& closeMsgTitle)
+int runInstaller(const wstring& app2runPath, const wstring& binWindowsClassName, const wstring& closeMsg, const wstring& closeMsgTitle)
 {
-
 	if (!binWindowsClassName.empty())
 	{
 		HWND h = ::FindWindowEx(NULL, NULL, binWindowsClassName.c_str(), NULL);
-
 		if (h)
 		{
 			int installAnswer = ::MessageBox(h, closeMsg.c_str(), closeMsgTitle.c_str(), MB_YESNO | MB_APPLMODAL);
-
 			if (installAnswer == IDNO)
 			{
-				return 0;
+				return (int)NO_ERROR;
 			}
 		}
 
-		// kill all process of binary needs to be updated.
+		// kill all processes of the app needs to be updated.
 		while (h)
 		{
 			::SendMessage(h, WM_CLOSE, 0, 0);
@@ -1023,16 +1024,15 @@ bool runInstaller(const wstring& app2runPath, const wstring& binWindowsClassName
 		}
 	}
 
-
 	// execute the installer
-	HINSTANCE result = ::ShellExecute(NULL, L"open", app2runPath.c_str(), nsisSilentInstallParam.c_str(), L".", SW_SHOW);
-
-	if (result <= (HINSTANCE)32) // There's a problem (Don't ask me why, ask Microsoft)
+	unsigned long long result = (unsigned long long)::ShellExecute(NULL, L"open", app2runPath.c_str(), nsisSilentInstallParam.c_str(), L".", SW_SHOW);
+	if (result <= 32) // There's a problem (Don't ask me why, ask Microsoft)
 	{
-		return false;
+		WRITE_LOG(GUP_LOG_FILENAME, L"runInstaller, ShellExecute failed with error code: ", std::to_wstring(result).c_str());
+		return (int)result;
 	}
 
-	return true;
+	return (int)ERROR_SUCCESS;
 }
 
 
@@ -1210,7 +1210,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		// - the used waiting method below is chosen on purpose (not using FindWindow/GetWindowThreadProcessId/OpenProcess/WaitForSingleObject way)
 		//   as the FindWindow can be unreliable in this case (the main app wnd may not exist at this time, but the app process
 		//   may still exist and e.g. locks its loaded plugins...)
-		const DWORD dwWaitMax = 5000;
+		const DWORD dwWaitMax = 3000; // do not use longer times here as the GUP can be also launched with the Notepad++ behind on purpose
 		const DWORD dwWaitStep = 250;
 		DWORD dwWaited = 0;
 		do
@@ -1400,7 +1400,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	//
 	// Notepad++ Updater
 	//
-	hInst = hInstance;
+	g_hInst = hInstance;
+	g_hAppWnd = ::FindWindowEx(NULL, NULL, gupParams.getClassName().c_str(), NULL); // for a possible interaction with the maintained app running behind
 	try {
 		if (launchSettingsDlg)
 		{
@@ -1409,7 +1410,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 				proxySrv = extraOptions.getProxyServer();
 				proxyPort = extraOptions.getPort();
 			}
-			if (::DialogBox(hInst, MAKEINTRESOURCE(IDD_PROXY_DLG), NULL, reinterpret_cast<DLGPROC>(proxyDlgProc)))
+			if (::DialogBox(g_hInst, MAKEINTRESOURCE(IDD_PROXY_DLG), NULL, reinterpret_cast<DLGPROC>(proxyDlgProc)))
 				extraOptions.writeProxyInfo(L"gupOptions.xml", proxySrv.c_str(), proxyPort);
 
 			return 0;
@@ -1443,7 +1444,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			return -1;
 		}
 
-		HWND hApp = ::FindWindowEx(NULL, NULL, gupParams.getClassName().c_str(), NULL);
 		bool isModal = gupParams.isMessageBoxModal();
 		GupDownloadInfo gupDlInfo(updateInfo.c_str());
 
@@ -1452,7 +1452,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			if (!isSilentMode)
 			{
 				UpdateCheckParams localParams{ nativeLang, gupParams };
-				::DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_UPDATE_DLG), isModal ? hApp : NULL,
+				::DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_UPDATE_DLG), isModal ? g_hAppWnd : NULL,
 					reinterpret_cast<DLGPROC>(updateCheckDlgProc), reinterpret_cast<LPARAM>(&localParams));
 			}
 			return 0;
@@ -1494,7 +1494,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		uaDlgStrs._noButton = nativeLang.getMessageString("MSGID_UPDATENo");
 
 		int dlAnswer = 0;
-		dlAnswer = static_cast<int32_t>(::DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_YESNONEVERDLG), hApp, reinterpret_cast<DLGPROC>(yesNoNeverDlgProc), (LPARAM)&uaDlgStrs));
+		dlAnswer = static_cast<int32_t>(::DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_YESNONEVERDLG), g_hAppWnd, reinterpret_cast<DLGPROC>(yesNoNeverDlgProc), (LPARAM)&uaDlgStrs));
 
 		if (dlAnswer == IDNO)
 		{
@@ -1503,9 +1503,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		
 		if (dlAnswer == IDCANCEL)
 		{
-			if (hApp)
+			if (g_hAppWnd)
 			{
-				::SendMessage(hApp, NPPM_DISABLEAUTOUPDATE, 0, 0);
+				::SendMessage(g_hAppWnd, NPPM_DISABLEAUTOUPDATE, 0, 0);
 			}
 			return 0;
 		}
@@ -1553,9 +1553,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			closeApp = MSGID_CLOSEAPP;
 		msg += closeApp;
 
-		runInstaller(dlDest, gupParams.getClassName(), msg, gupParams.getMessageBoxTitle().c_str());
-
-		return 0;
+		return runInstaller(dlDest, gupParams.getClassName(), msg, gupParams.getMessageBoxTitle().c_str());
 
 	} catch (exception ex) {
 		if (!isSilentMode)
