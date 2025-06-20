@@ -68,7 +68,7 @@ static wstring dlFileName = L"";
 static wstring appIconFile = L"";
 static wstring nsisSilentInstallParam = L"";
 
-const wchar_t FLAG_NSIS_SILENT_INSTALL_PARAM[] = L"/closeRunningNpp /S /runNppAfterSilentInstall";
+wstring FLAG_NSIS_SILENT_INSTALL_PARAM = L"/closeRunningNpp /S /runNppAfterSilentInstall";
 
 
 const wchar_t FLAG_OPTIONS[] = L"-options";
@@ -659,7 +659,10 @@ LRESULT CALLBACK yesNoNeverDlgProc(HWND hWndDlg, UINT message, WPARAM wParam, LP
 					::SetDlgItemText(hWndDlg, IDNO, pUaDlgStrs->_noButton.c_str());
 
 				if (!g_hAppWnd)
+				{
 					::EnableWindow(::GetDlgItem(hWndDlg, IDCANCEL), FALSE); // no app-wnd to sent the updates disabling message signal
+					FLAG_NSIS_SILENT_INSTALL_PARAM = L"/closeRunningNpp /S";
+				}
 			}
 
 			goToScreenCenter(hWndDlg);
