@@ -23,9 +23,6 @@
  ***************************************************************************/
 #include "tool_setup.h"
 
-#include "strcase.h"
-#include "curlx.h"
-
 #include "tool_cfgable.h"
 #include "tool_getparam.h"
 #include "tool_getpass.h"
@@ -34,7 +31,6 @@
 #include "tool_libinfo.h"
 #include "tool_util.h"
 #include "tool_version.h"
-#include "dynbuf.h"
 
 #include "memdebug.h" /* keep this as LAST include */
 
@@ -54,7 +50,7 @@ struct getout *new_getout(struct OperationConfig *config)
     /* move the last pointer */
     config->url_last = node;
 
-    node->flags = config->default_node_flags;
+    node->useremote = config->remote_name_all;
     node->num = outnum++;
   }
   return node;
@@ -91,7 +87,7 @@ static size_t memcrlf(char *orig,
 
 ParameterError file2string(char **bufp, FILE *file)
 {
-  struct curlx_dynbuf dyn;
+  struct dynbuf dyn;
   curlx_dyn_init(&dyn, MAX_FILE2STRING);
   if(file) {
     do {
@@ -141,7 +137,7 @@ ParameterError file2memory_range(char **bufp, size_t *size, FILE *file,
 {
   if(file) {
     size_t nread;
-    struct curlx_dynbuf dyn;
+    struct dynbuf dyn;
     curl_off_t offset = 0;
     curl_off_t throwaway = 0;
 
@@ -328,7 +324,7 @@ ParameterError secs2ms(long *valp, const char *str)
   const unsigned int digs[] = { 1, 10, 100, 1000, 10000, 1000000,
     1000000, 10000000, 100000000 };
   if(!str ||
-     curlx_str_number(&str, &secs, CURL_OFF_T_MAX/100))
+     curlx_str_number(&str, &secs, LONG_MAX/1000 - 1))
     return PARAM_BAD_NUMERIC;
   if(!curlx_str_single(&str, '.')) {
     curl_off_t fracs;
@@ -413,7 +409,7 @@ ParameterError proto2num(struct OperationConfig *config,
                          const char * const *val, char **ostr, const char *str)
 {
   const char **protoset;
-  struct curlx_dynbuf obuf;
+  struct dynbuf obuf;
   size_t proto;
   CURLcode result;
 
@@ -581,7 +577,7 @@ static CURLcode checkpasswd(const char *kind, /* for what purpose */
     /* no password present, prompt for one */
     char passwd[2048] = "";
     char prompt[256];
-    struct curlx_dynbuf dyn;
+    struct dynbuf dyn;
 
     curlx_dyn_init(&dyn, MAX_USERPWDLENGTH);
     if(osep)
@@ -714,22 +710,16 @@ CURLcode get_args(struct OperationConfig *config, const size_t i)
       return CURLE_OUT_OF_MEMORY;
   }
 
-  /* Check we have a password for the given host user */
-  if(config->userpwd && !config->oauth_bearer) {
+  /* Check if we have a password for the given host user */
+  if(config->userpwd && !config->oauth_bearer)
     result = checkpasswd("host", i, last, &config->userpwd);
-    if(result)
-      return result;
-  }
 
-  /* Check we have a password for the given proxy user */
-  if(config->proxyuserpwd) {
+  /* Check if we have a password for the given proxy user */
+  if(!result && config->proxyuserpwd)
     result = checkpasswd("proxy", i, last, &config->proxyuserpwd);
-    if(result)
-      return result;
-  }
 
-  /* Check we have a user agent */
-  if(!config->useragent) {
+  /* Check if we have a user agent */
+  if(!result && !config->useragent) {
     config->useragent = my_useragent();
     if(!config->useragent) {
       errorf(config->global, "out of memory");

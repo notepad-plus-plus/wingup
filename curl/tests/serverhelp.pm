@@ -116,13 +116,13 @@ sub serverfactors {
     my $idnum;
 
     if($server =~
-        /^((ftp|http|imap|pop3|smtp|http-pipe)s?)(\d*)(-ipv6|)$/) {
+        /^((ftp|http|imap|pop3|smtp)s?)(\d*)(-ipv6|)$/) {
         $proto  = $1;
         $idnum  = ($3 && ($3 > 1)) ? $3 : 1;
         $ipvnum = ($4 && ($4 =~ /6$/)) ? 6 : 4;
     }
     elsif($server =~
-        /^(tftp|sftp|socks|ssh|rtsp|gopher|httptls)(\d*)(-ipv6|)$/) {
+        /^(dns|tftp|sftp|socks|ssh|rtsp|gopher|httptls)(\d*)(-ipv6|)$/) {
         $proto  = $1;
         $idnum  = ($2 && ($2 > 1)) ? $2 : 1;
         $ipvnum = ($3 && ($3 =~ /6$/)) ? 6 : 4;
@@ -142,7 +142,7 @@ sub servername_str {
 
     $proto = uc($proto) if($proto);
     die "unsupported protocol: '$proto'" unless($proto &&
-        ($proto =~ /^(((FTP|HTTP|HTTP\/2|HTTP\/3|IMAP|POP3|GOPHER|SMTP|HTTP-PIPE)S?)|(TFTP|SFTP|SOCKS|SSH|RTSP|HTTPTLS|DICT|SMB|SMBS|TELNET|MQTT))$/));
+        ($proto =~ /^(((DNS|FTP|HTTP|HTTP\/2|HTTP\/3|IMAP|POP3|GOPHER|SMTP|HTTPS-MTLS)S?)|(TFTP|SFTP|SOCKS|SSH|RTSP|HTTPTLS|DICT|SMB|SMBS|TELNET|MQTT))$/));
 
     $ipver = (not $ipver) ? 'ipv4' : lc($ipver);
     die "unsupported IP version: '$ipver'" unless($ipver &&
@@ -247,14 +247,7 @@ sub server_exe {
     if(!defined $ext) {
         $ext = 'SRV';
     }
-    my $cmd;
-    if($ENV{'CURL_TEST_BUNDLES'}) {
-        $cmd = $SRVDIR . "servers" . exe_ext($ext) . " $name";
-    }
-    else {
-        $cmd = $SRVDIR . $name . exe_ext($ext);
-    }
-    return exerunner() . "$cmd";
+    return exerunner() . $SRVDIR . "servers" . exe_ext($ext) . " $name";
 }
 
 
@@ -266,13 +259,7 @@ sub server_exe_args {
     if(!defined $ext) {
         $ext = 'SRV';
     }
-    my @cmd;
-    if($ENV{'CURL_TEST_BUNDLES'}) {
-        @cmd = ($SRVDIR . "servers" . exe_ext($ext), $name);
-    }
-    else {
-        @cmd = ($SRVDIR . $name . exe_ext($ext));
-    }
+    my @cmd = ($SRVDIR . "servers" . exe_ext($ext), $name);
     if($ENV{'CURL_TEST_EXE_RUNNER'}) {
         unshift @cmd, $ENV{'CURL_TEST_EXE_RUNNER'};
     }

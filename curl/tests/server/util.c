@@ -21,48 +21,11 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "server_setup.h"
+#include "first.h"
 
-#ifndef UNDER_CE
-#include <signal.h>
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
 #endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef _XOPEN_SOURCE_EXTENDED
-/* This define is "almost" required to build on HP-UX 11 */
-#include <arpa/inet.h>
-#endif
-#ifdef HAVE_NETDB_H
-#include <netdb.h>
-#endif
-
-#ifdef MSDOS
-#include <dos.h>  /* delay() */
-#endif
-
-#ifdef _WIN32
-#include "strerror.h"
-#endif
-
-#include "curlx.h" /* from the private lib dir */
-#include "util.h"
-
-/* need init from main() */
-const char *pidname = NULL;
-const char *portname = NULL; /* none by default */
-const char *serverlogfile = NULL;
-int serverlogslocked;
-const char *configfile = NULL;
-const char *logdir = "log";
-char loglockfile[256];
-#ifdef USE_IPV6
-bool use_ipv6 = FALSE;
-#endif
-const char *ipv_inuse = "IPv4";
-unsigned short server_port = 0;
-const char *socket_type = "IPv4";
-int socket_domain = AF_INET;
 
 /* This function returns a pointer to STATIC memory. It converts the given
  * binary lump to a hex formatted string usable for output in logs or
@@ -82,13 +45,32 @@ char *data_to_hex(char *data, size_t len)
     if((data[i] >= 0x20) && (data[i] < 0x7f))
       *optr++ = *iptr++;
     else {
-      msnprintf(optr, 4, "%%%02x", *iptr++);
+      snprintf(optr, 4, "%%%02x", (unsigned char)*iptr++);
       optr += 3;
     }
   }
   *optr = 0; /* in case no sprintf was used */
 
   return buf;
+}
+
+void loghex(unsigned char *buffer, ssize_t len)
+{
+  char data[12000];
+  ssize_t i;
+  unsigned char *ptr = buffer;
+  char *optr = data;
+  ssize_t width = 0;
+  int left = sizeof(data);
+
+  for(i = 0; i < len && (left >= 0); i++) {
+    snprintf(optr, left, "%02x", ptr[i]);
+    width += 2;
+    optr += 2;
+    left -= 2;
+  }
+  if(width)
+    logmsg("'%s'", data);
 }
 
 void logmsg(const char *msg, ...)
@@ -99,7 +81,7 @@ void logmsg(const char *msg, ...)
   struct curltime tv;
   time_t sec;
   struct tm *now;
-  char timebuf[20];
+  char timebuf[50];
   static time_t epoch_offset;
   static int    known_offset;
 
@@ -117,12 +99,19 @@ void logmsg(const char *msg, ...)
   /* !checksrc! disable BANNEDFUNC 1 */
   now = localtime(&sec); /* not thread safe but we don't care */
 
-  msnprintf(timebuf, sizeof(timebuf), "%02d:%02d:%02d.%06ld",
-            (int)now->tm_hour, (int)now->tm_min, (int)now->tm_sec,
-            (long)tv.tv_usec);
+  snprintf(timebuf, sizeof(timebuf), "%02d:%02d:%02d.%06ld",
+           (int)now->tm_hour, (int)now->tm_min, (int)now->tm_sec,
+           (long)tv.tv_usec);
 
   va_start(ap, msg);
-  mvsnprintf(buffer, sizeof(buffer), msg, ap);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
+  vsnprintf(buffer, sizeof(buffer), msg, ap);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   va_end(ap);
 
   do {
@@ -140,25 +129,6 @@ void logmsg(const char *msg, ...)
     fprintf(stderr, "Error opening file '%s'\n", serverlogfile);
     fprintf(stderr, "Msg not logged: %s %s\n", timebuf, buffer);
   }
-}
-
-void loghex(unsigned char *buffer, ssize_t len)
-{
-  char data[12000];
-  ssize_t i;
-  unsigned char *ptr = buffer;
-  char *optr = data;
-  ssize_t width = 0;
-  int left = sizeof(data);
-
-  for(i = 0; i < len && (left >= 0); i++) {
-    msnprintf(optr, left, "%02x", ptr[i]);
-    width += 2;
-    optr += 2;
-    left -= 2;
-  }
-  if(width)
-    logmsg("'%s'", data);
 }
 
 unsigned char byteval(char *value)
@@ -226,87 +196,44 @@ const char *sstrerror(int err)
   static char buf[512];
   return curlx_winapi_strerror(err, buf, sizeof(buf));
 }
+#else
+#define sstrerror(e) strerror(e)
 #endif  /* _WIN32 */
 
-/* set by the main code to point to where the test dir is */
-const char *srcpath = ".";
-
+/* fopens the test case file */
 FILE *test2fopen(long testno, const char *logdir2)
 {
   FILE *stream;
   char filename[256];
   /* first try the alternative, preprocessed, file */
-  msnprintf(filename, sizeof(filename), "%s/test%ld", logdir2, testno);
+  snprintf(filename, sizeof(filename), "%s/test%ld", logdir2, testno);
   stream = fopen(filename, "rb");
   if(stream)
     return stream;
 
   /* then try the source version */
-  msnprintf(filename, sizeof(filename), "%s/data/test%ld", srcpath, testno);
+  snprintf(filename, sizeof(filename), "%s/data/test%ld", srcpath, testno);
   stream = fopen(filename, "rb");
 
   return stream;
 }
 
-/*
- * Portable function used for waiting a specific amount of ms.
- * Waiting indefinitely with this function is not allowed, a
- * zero or negative timeout value will return immediately.
- *
- * Return values:
- *   -1 = system call error, or invalid timeout value
- *    0 = specified timeout has elapsed
- */
-int wait_ms(timediff_t timeout_ms)
-{
-  int r = 0;
-
-  if(!timeout_ms)
-    return 0;
-  if(timeout_ms < 0) {
-    SET_SOCKERRNO(SOCKEINVAL);
-    return -1;
-  }
-#if defined(MSDOS)
-  delay((unsigned int)timeout_ms);
-#elif defined(_WIN32)
-  /* prevent overflow, timeout_ms is typecast to ULONG/DWORD. */
-#if TIMEDIFF_T_MAX >= ULONG_MAX
-  if(timeout_ms >= ULONG_MAX)
-    timeout_ms = ULONG_MAX-1;
-    /* do not use ULONG_MAX, because that is equal to INFINITE */
-#endif
-  Sleep((DWORD)timeout_ms);
+#ifdef _WIN32
+#define t_getpid() GetCurrentProcessId()
 #else
-  /* avoid using poll() for this since it behaves incorrectly with no sockets
-     on Apple operating systems */
-  {
-    struct timeval pending_tv;
-    r = select(0, NULL, NULL, NULL, curlx_mstotv(&pending_tv, timeout_ms));
-  }
-#endif /* _WIN32 */
-  if(r) {
-    if((r == -1) && (SOCKERRNO == SOCKEINTR))
-      /* make EINTR from select or poll not a "lethal" error */
-      r = 0;
-    else
-      r = -1;
-  }
-  return r;
-}
+#define t_getpid() getpid()
+#endif
 
 curl_off_t our_getpid(void)
 {
-  curl_off_t pid;
-
-  pid = (curl_off_t)curlx_getpid();
+  curl_off_t pid = (curl_off_t)t_getpid();
 #ifdef _WIN32
   /* store pid + MAX_PID to avoid conflict with Cygwin/msys PIDs, see also:
-   * - 2019-01-31: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit; ↵
+   * - 2019-01-31: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit;
    *               h=b5e1003722cb14235c4f166be72c09acdffc62ea
-   * - 2019-02-02: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit; ↵
+   * - 2019-02-02: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit;
    *               h=448cf5aa4b429d5a9cebf92a0da4ab4b5b6d23fe
-   * - 2024-12-19: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit; ↵
+   * - 2024-12-19: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit;
    *               h=363357c023ce01e936bdaedf0f479292a8fa4e0f
    */
   pid += 4194304;
@@ -325,9 +252,9 @@ int write_pidfile(const char *filename)
     logmsg("Couldn't write pid file: %s %s", filename, strerror(errno));
     return 0; /* fail */
   }
-  fprintf(pidfile, "%" CURL_FORMAT_CURL_OFF_T "\n", pid);
+  fprintf(pidfile, "%ld\n", (long)pid);
   fclose(pidfile);
-  logmsg("Wrote pid %" CURL_FORMAT_CURL_OFF_T " to %s", pid, filename);
+  logmsg("Wrote pid %ld to %s", (long)pid, filename);
   return 1; /* success */
 }
 
@@ -428,17 +355,6 @@ static HANDLE thread_main_window = NULL;
 static HWND hidden_main_window = NULL;
 #endif
 
-/* var which if set indicates that the program should finish execution */
-volatile int got_exit_signal = 0;
-
-/* if next is set indicates the first signal handled in exit_signal_handler */
-volatile int exit_signal = 0;
-
-#ifdef _WIN32
-/* event which if set indicates that the program should finish */
-HANDLE exit_event = NULL;
-#endif
-
 /* signal handler that will be triggered to indicate that the program
  * should finish its execution in a controlled manner as soon as possible.
  * The first time this is called it will set got_exit_signal to one and
@@ -502,7 +418,7 @@ static void exit_signal_handler(int signum)
  * application, such as one in UNIX, to become multithreaded and cause
  * unexpected behavior.
  * [...]
- * The SIGILL and SIGTERM signals are not generated under Windows.
+ * The SIGKILL and SIGTERM signals are not generated under Windows.
  * They are included for ANSI compatibility. Therefore, you can set
  * signal handlers for these signals by using signal, and you can also
  * explicitly generate these signals by calling raise. Source:
@@ -791,7 +707,7 @@ int bind_unix_socket(curl_socket_t sock, const char *unix_socket,
   }
   strcpy(sau->sun_path, unix_socket);
   rc = bind(sock, (struct sockaddr*)sau, sizeof(struct sockaddr_un));
-  if(0 != rc && SOCKERRNO == SOCKEADDRINUSE) {
+  if(rc && SOCKERRNO == SOCKEADDRINUSE) {
     struct_stat statbuf;
     /* socket already exists. Perhaps it is stale? */
     curl_socket_t unixfd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -804,7 +720,7 @@ int bind_unix_socket(curl_socket_t sock, const char *unix_socket,
     rc = connect(unixfd, (struct sockaddr*)sau, sizeof(struct sockaddr_un));
     error = SOCKERRNO;
     sclose(unixfd);
-    if(0 != rc && SOCKECONNREFUSED != error) {
+    if(rc && error != SOCKECONNREFUSED) {
       logmsg("Failed to connect to %s (%d) %s",
              unix_socket, error, sstrerror(error));
       return rc;
@@ -816,7 +732,7 @@ int bind_unix_socket(curl_socket_t sock, const char *unix_socket,
 #else
     rc = lstat(unix_socket, &statbuf);
 #endif
-    if(0 != rc) {
+    if(rc) {
       logmsg("Error binding socket, failed to stat %s (%d) %s",
              unix_socket, errno, strerror(errno));
       return rc;
@@ -829,7 +745,7 @@ int bind_unix_socket(curl_socket_t sock, const char *unix_socket,
 #endif
     /* dead socket, cleanup and retry bind */
     rc = unlink(unix_socket);
-    if(0 != rc) {
+    if(rc) {
       logmsg("Error binding socket, failed to unlink %s (%d) %s",
              unix_socket, errno, strerror(errno));
       return rc;
@@ -860,4 +776,167 @@ unsigned short util_ultous(unsigned long ulnum)
 #ifdef __INTEL_COMPILER
 #  pragma warning(pop)
 #endif
+}
+
+curl_socket_t sockdaemon(curl_socket_t sock,
+                         unsigned short *listenport,
+                         const char *unix_socket,
+                         bool bind_only)
+{
+  /* passive daemon style */
+  srvr_sockaddr_union_t listener;
+  int flag;
+  int rc;
+  int totdelay = 0;
+  int maxretr = 10;
+  int delay = 20;
+  int attempt = 0;
+  int error = 0;
+
+#ifndef USE_UNIX_SOCKETS
+  (void)unix_socket;
+#endif
+
+  do {
+    attempt++;
+    flag = 1;
+    rc = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
+                    (void *)&flag, sizeof(flag));
+    if(rc) {
+      error = SOCKERRNO;
+      logmsg("setsockopt(SO_REUSEADDR) failed with error (%d) %s",
+             error, sstrerror(error));
+      if(maxretr) {
+        rc = curlx_wait_ms(delay);
+        if(rc) {
+          /* should not happen */
+          error = SOCKERRNO;
+          logmsg("curlx_wait_ms() failed with error (%d) %s",
+                 error, sstrerror(error));
+          sclose(sock);
+          return CURL_SOCKET_BAD;
+        }
+        if(got_exit_signal) {
+          logmsg("signalled to die, exiting...");
+          sclose(sock);
+          return CURL_SOCKET_BAD;
+        }
+        totdelay += delay;
+        delay *= 2; /* double the sleep for next attempt */
+      }
+    }
+  } while(rc && maxretr--);
+
+  if(rc) {
+    logmsg("setsockopt(SO_REUSEADDR) failed %d times in %d ms. Error (%d) %s",
+           attempt, totdelay, error, strerror(error));
+    logmsg("Continuing anyway...");
+  }
+
+  /* When the specified listener port is zero, it is actually a
+     request to let the system choose a non-zero available port. */
+
+  switch(socket_domain) {
+    case AF_INET:
+      memset(&listener.sa4, 0, sizeof(listener.sa4));
+      listener.sa4.sin_family = AF_INET;
+      listener.sa4.sin_addr.s_addr = INADDR_ANY;
+      listener.sa4.sin_port = htons(*listenport);
+      rc = bind(sock, &listener.sa, sizeof(listener.sa4));
+      break;
+#ifdef USE_IPV6
+    case AF_INET6:
+      memset(&listener.sa6, 0, sizeof(listener.sa6));
+      listener.sa6.sin6_family = AF_INET6;
+      listener.sa6.sin6_addr = in6addr_any;
+      listener.sa6.sin6_port = htons(*listenport);
+      rc = bind(sock, &listener.sa, sizeof(listener.sa6));
+      break;
+#endif /* USE_IPV6 */
+#ifdef USE_UNIX_SOCKETS
+    case AF_UNIX:
+      rc = bind_unix_socket(sock, unix_socket, &listener.sau);
+      break;
+#endif
+    default:
+      rc = 1;
+  }
+
+  if(rc) {
+    error = SOCKERRNO;
+#ifdef USE_UNIX_SOCKETS
+    if(socket_domain == AF_UNIX)
+      logmsg("Error binding socket on path %s (%d) %s",
+             unix_socket, error, sstrerror(error));
+    else
+#endif
+      logmsg("Error binding socket on port %hu (%d) %s",
+             *listenport, error, sstrerror(error));
+    sclose(sock);
+    return CURL_SOCKET_BAD;
+  }
+
+  if(!*listenport
+#ifdef USE_UNIX_SOCKETS
+     && !unix_socket
+#endif
+    ) {
+    /* The system was supposed to choose a port number, figure out which
+       port we actually got and update the listener port value with it. */
+    curl_socklen_t la_size;
+    srvr_sockaddr_union_t localaddr;
+#ifdef USE_IPV6
+    if(socket_domain == AF_INET6)
+      la_size = sizeof(localaddr.sa6);
+    else
+#endif
+      la_size = sizeof(localaddr.sa4);
+    memset(&localaddr.sa, 0, (size_t)la_size);
+    if(getsockname(sock, &localaddr.sa, &la_size) < 0) {
+      error = SOCKERRNO;
+      logmsg("getsockname() failed with error (%d) %s",
+             error, sstrerror(error));
+      sclose(sock);
+      return CURL_SOCKET_BAD;
+    }
+    switch(localaddr.sa.sa_family) {
+    case AF_INET:
+      *listenport = ntohs(localaddr.sa4.sin_port);
+      break;
+#ifdef USE_IPV6
+    case AF_INET6:
+      *listenport = ntohs(localaddr.sa6.sin6_port);
+      break;
+#endif
+    default:
+      break;
+    }
+    if(!*listenport) {
+      /* Real failure, listener port shall not be zero beyond this point. */
+      logmsg("Apparently getsockname() succeeded, with listener port zero.");
+      logmsg("A valid reason for this failure is a binary built without");
+      logmsg("proper network library linkage. This might not be the only");
+      logmsg("reason, but double check it before anything else.");
+      sclose(sock);
+      return CURL_SOCKET_BAD;
+    }
+  }
+
+  /* bindonly option forces no listening */
+  if(bind_only) {
+    logmsg("instructed to bind port without listening");
+    return sock;
+  }
+
+  /* start accepting connections */
+  rc = listen(sock, 5);
+  if(rc) {
+    error = SOCKERRNO;
+    logmsg("listen(%ld, 5) failed with error (%d) %s",
+           (long)sock, error, sstrerror(error));
+    sclose(sock);
+    return CURL_SOCKET_BAD;
+  }
+
+  return sock;
 }

@@ -30,11 +30,8 @@
 #include <unixlib.h>
 #endif
 
-#include "curlx.h"
-
 #include "curlmsg_vms.h"
 #include "tool_vms.h"
-
 #include "memdebug.h" /* keep this as LAST include */
 
 void decc$__posix_exit(int __status);

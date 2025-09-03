@@ -23,12 +23,9 @@
  ***************************************************************************/
 #include "tool_setup.h"
 
-#include "strcase.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-
-#include "curlx.h"
 
 #include "tool_cfgable.h"
 #include "tool_doswin.h"
@@ -102,7 +99,7 @@ size_t tool_header_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
 
 #ifdef DEBUGBUILD
   if(size * nmemb > (size_t)CURL_MAX_HTTP_HEADER) {
-    warnf(per->config->global, "Header data exceeds single call write limit");
+    warnf(per->config->global, "Header data exceeds write limit");
     return CURL_WRITEFUNC_ERROR;
   }
 #endif
@@ -249,7 +246,7 @@ size_t tool_header_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
       if(hdrcbdata->honor_cd_filename &&
          hdrcbdata->config->show_headers) {
         /* still awaiting the Content-Disposition header, store the header in
-           memory. Since it is not zero terminated, we need an extra dance. */
+           memory. Since it is not null-terminated, we need an extra dance. */
         char *clone = aprintf("%.*s", (int)cb, str);
         if(clone) {
           struct curl_slist *old = hdrcbdata->headlist;
@@ -352,7 +349,7 @@ static char *parse_filename(const char *ptr, size_t len)
   if(q) {
     p = q + 1;
     if(!*p) {
-      curlx_safefree(copy);
+      tool_safefree(copy);
       return NULL;
     }
   }
@@ -364,7 +361,7 @@ static char *parse_filename(const char *ptr, size_t len)
   if(q) {
     p = q + 1;
     if(!*p) {
-      curlx_safefree(copy);
+      tool_safefree(copy);
       return NULL;
     }
   }
@@ -385,7 +382,7 @@ static char *parse_filename(const char *ptr, size_t len)
   {
     char *sanitized;
     SANITIZEcode sc = sanitize_file_name(&sanitized, copy, 0);
-    curlx_safefree(copy);
+    tool_safefree(copy);
     if(sc)
       return NULL;
     copy = sanitized;
@@ -441,7 +438,7 @@ void write_linked_location(CURL *curl, const char *location, size_t loclen,
   if(!u)
     goto locout;
 
-  /* Create a NUL-terminated and whitespace-stripped copy of Location: */
+  /* Create a null-terminated and whitespace-stripped copy of Location: */
   copyloc = malloc(llen + 1);
   if(!copyloc)
     goto locout;

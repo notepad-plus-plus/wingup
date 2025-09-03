@@ -21,7 +21,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "server_setup.h"
+#include "first.h"
 
 /* sws.c: simple (silly?) web server
 
@@ -30,33 +30,9 @@
 
  */
 
-#ifndef UNDER_CE
-#include <signal.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef HAVE_NETINET_IN6_H
-#include <netinet/in6.h>
-#endif
-#ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
-#endif
-#ifdef HAVE_NETDB_H
-#include <netdb.h>
-#endif
 #ifdef HAVE_NETINET_TCP_H
 #include <netinet/tcp.h> /* for TCP_NODELAY */
 #endif
-
-#include "curlx.h" /* from the private lib dir */
-#include "getpart.h"
-#include "inet_pton.h"
-#include "util.h"
-#include "server_sockaddr.h"
-
-/* include memdebug.h last */
-#include "memdebug.h"
 
 static bool use_gopher = FALSE;
 static bool is_proxy = FALSE;
@@ -330,7 +306,6 @@ static int sws_ProcessRequest(struct sws_httprequest *req)
   char *line = &req->reqbuf[req->checkindex];
   bool chunked = FALSE;
   static char request[REQUEST_KEYWORD_SIZE];
-  char logbuf[456];
   int prot_major = 0;
   int prot_minor = 0;
   char *end = strstr(line, end_of_headers);
@@ -398,12 +373,10 @@ static int sws_ProcessRequest(struct sws_httprequest *req)
       /* get the number after it */
       if(*ptr == '/') {
         if((npath + strlen(request)) < 400)
-          msnprintf(logbuf, sizeof(logbuf), "Got request: %s %.*s HTTP/%d.%d",
-                    request, (int)npath, httppath, prot_major, prot_minor);
+          logmsg("Got request: %s %.*s HTTP/%d.%d",
+                 request, (int)npath, httppath, prot_major, prot_minor);
         else
-          msnprintf(logbuf, sizeof(logbuf), "Got a *HUGE* request HTTP/%d.%d",
-                    prot_major, prot_minor);
-        logmsg("%s", logbuf);
+          logmsg("Got a *HUGE* request HTTP/%d.%d", prot_major, prot_minor);
 
         if(!strncmp("/verifiedserver", ptr, 15)) {
           logmsg("Are-we-friendly question received");
@@ -429,10 +402,7 @@ static int sws_ProcessRequest(struct sws_httprequest *req)
           req->partno = 0;
 
         if(req->testno) {
-
-          msnprintf(logbuf, sizeof(logbuf), "Serve test number %ld part %ld",
-                    req->testno, req->partno);
-          logmsg("%s", logbuf);
+          logmsg("Serve test number %ld part %ld", req->testno, req->partno);
         }
         else {
           logmsg("No test number in path");
@@ -449,10 +419,8 @@ static int sws_ProcessRequest(struct sws_httprequest *req)
                   doc, &prot_major, &prot_minor) == 3) {
           char *portp = NULL;
 
-          msnprintf(logbuf, sizeof(logbuf),
-                    "Received a CONNECT %s HTTP/%d.%d request",
-                    doc, prot_major, prot_minor);
-          logmsg("%s", logbuf);
+          logmsg("Received a CONNECT %s HTTP/%d.%d request",
+                 doc, prot_major, prot_minor);
 
           req->connect_request = TRUE;
 
@@ -561,10 +529,8 @@ static int sws_ProcessRequest(struct sws_httprequest *req)
       else
         req->partno = 0;
 
-      msnprintf(logbuf, sizeof(logbuf),
-                "Requested GOPHER test number %ld part %ld",
-                req->testno, req->partno);
-      logmsg("%s", logbuf);
+      logmsg("Requested GOPHER test number %ld part %ld",
+             req->testno, req->partno);
     }
   }
 
@@ -583,7 +549,7 @@ static int sws_ProcessRequest(struct sws_httprequest *req)
     if(got_exit_signal)
       return 1; /* done */
 
-    if((req->cl == 0) && strncasecompare("Content-Length:", line, 15)) {
+    if((req->cl == 0) && !CURL_STRNICMP("Content-Length:", line, 15)) {
       /* If we don't ignore content-length, we read it and we read the whole
          request including the body before we return. If we've been told to
          ignore the content-length, we will return as soon as all headers
@@ -605,14 +571,13 @@ static int sws_ProcessRequest(struct sws_httprequest *req)
       if(req->skip)
         logmsg("... but will abort after %zu bytes", req->cl);
     }
-    else if(strncasecompare("Transfer-Encoding: chunked", line,
-                            strlen("Transfer-Encoding: chunked"))) {
+    else if(!CURL_STRNICMP("Transfer-Encoding: chunked", line,
+                           strlen("Transfer-Encoding: chunked"))) {
       /* chunked data coming in */
       chunked = TRUE;
     }
-    else if(req->noexpect &&
-            strncasecompare("Expect: 100-continue", line,
-                            strlen("Expect: 100-continue"))) {
+    else if(req->noexpect && !CURL_STRNICMP("Expect: 100-continue", line,
+                                            strlen("Expect: 100-continue"))) {
       if(req->cl)
         req->cl = 0;
       req->skipall = TRUE;
@@ -751,8 +716,8 @@ static void sws_storerequest(const char *reqbuf, size_t totalsize)
   FILE *dump;
   char dumpfile[256];
 
-  msnprintf(dumpfile, sizeof(dumpfile), "%s/%s",
-            logdir, is_proxy ? REQUEST_PROXY_DUMP : REQUEST_DUMP);
+  snprintf(dumpfile, sizeof(dumpfile), "%s/%s",
+           logdir, is_proxy ? REQUEST_PROXY_DUMP : REQUEST_DUMP);
 
   if(!reqbuf)
     return;
@@ -989,8 +954,8 @@ static int sws_send_doc(curl_socket_t sock, struct sws_httprequest *req)
   static char weare[256];
   char responsedump[256];
 
-  msnprintf(responsedump, sizeof(responsedump), "%s/%s",
-            logdir, is_proxy ? RESPONSE_PROXY_DUMP : RESPONSE_DUMP);
+  snprintf(responsedump, sizeof(responsedump), "%s/%s",
+           logdir, is_proxy ? RESPONSE_PROXY_DUMP : RESPONSE_DUMP);
 
   switch(req->rcmd) {
   default:
@@ -1028,15 +993,15 @@ static int sws_send_doc(curl_socket_t sock, struct sws_httprequest *req)
     case DOCNUMBER_WERULEZ:
       /* we got a "friends?" question, reply back that we sure are */
       logmsg("Identifying ourselves as friends");
-      msnprintf(msgbuf, sizeof(msgbuf), "WE ROOLZ: %"
-                CURL_FORMAT_CURL_OFF_T "\r\n", our_getpid());
+      snprintf(msgbuf, sizeof(msgbuf), "WE ROOLZ: %ld\r\n",
+               (long)our_getpid());
       msglen = strlen(msgbuf);
       if(use_gopher)
-        msnprintf(weare, sizeof(weare), "%s", msgbuf);
+        snprintf(weare, sizeof(weare), "%s", msgbuf);
       else
-        msnprintf(weare, sizeof(weare),
-                  "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n%s",
-                  msglen, msgbuf);
+        snprintf(weare, sizeof(weare),
+                 "HTTP/1.1 200 OK\r\nContent-Length: %u\r\n\r\n%s",
+                 (unsigned int)msglen, msgbuf);
       buffer = weare;
       break;
     case DOCNUMBER_404:
@@ -1056,9 +1021,9 @@ static int sws_send_doc(curl_socket_t sock, struct sws_httprequest *req)
     const char *section = req->connect_request ? "connect" : "data";
 
     if(req->partno)
-      msnprintf(partbuf, sizeof(partbuf), "%s%ld", section, req->partno);
+      snprintf(partbuf, sizeof(partbuf), "%s%ld", section, req->partno);
     else
-      msnprintf(partbuf, sizeof(partbuf), "%s", section);
+      snprintf(partbuf, sizeof(partbuf), "%s", section);
 
     logmsg("Send response test%ld section <%s>", req->testno, partbuf);
 
@@ -1146,7 +1111,7 @@ retry:
     written = swrite(sock, buffer, num);
     if(written < 0) {
       if((SOCKEWOULDBLOCK == SOCKERRNO) || (EAGAIN == SOCKERRNO)) {
-        wait_ms(10);
+        curlx_wait_ms(10);
         goto retry;
       }
       sendfailure = TRUE;
@@ -1170,7 +1135,7 @@ retry:
         int sleep_time = msecs_left > MAX_SLEEP_TIME_MS ?
           MAX_SLEEP_TIME_MS : msecs_left;
         intervals--;
-        wait_ms(sleep_time);
+        curlx_wait_ms(sleep_time);
         msecs_left -= sleep_time;
       }
     }
@@ -1214,11 +1179,11 @@ retry:
           quarters = num * 4;
           while((quarters > 0) && !got_exit_signal) {
             quarters--;
-            res = wait_ms(250);
+            res = curlx_wait_ms(250);
             if(res) {
               /* should not happen */
               error = SOCKERRNO;
-              logmsg("wait_ms() failed with error (%d) %s",
+              logmsg("curlx_wait_ms() failed with error (%d) %s",
                      error, sstrerror(error));
               break;
             }
@@ -1441,7 +1406,7 @@ static void http_connect(curl_socket_t *infdp,
      'end of headers' separate from the server data that follows.
      This is done to prevent triggering libcurl known bug #39. */
   for(loop = 2; (loop > 0) && !got_exit_signal; loop--)
-    wait_ms(250);
+    curlx_wait_ms(250);
   if(got_exit_signal)
     goto http_connect_cleanup;
 
@@ -1606,7 +1571,7 @@ static void http_connect(curl_socket_t *infdp,
             if(!err && req2->connect_request) {
               /* sleep to prevent triggering libcurl known bug #39. */
               for(loop = 2; (loop > 0) && !got_exit_signal; loop--)
-                wait_ms(250);
+                curlx_wait_ms(250);
               if(!got_exit_signal) {
                 /* connect to the server */
                 serverfd[SWS_DATA] = connect_to(ipaddr, req2->connect_port);
@@ -1760,7 +1725,7 @@ static void http_connect(curl_socket_t *infdp,
 
       if(tcp_fin_wr)
         /* allow kernel to place FIN bit packet on the wire */
-        wait_ms(250);
+        curlx_wait_ms(250);
 
       /* socket clearing */
       for(i = 0; i <= max_tunnel_idx; i++) {
@@ -2000,7 +1965,7 @@ static int service_connection(curl_socket_t msgsock,
   return -1;
 }
 
-int main(int argc, char *argv[])
+static int test_sws(int argc, char *argv[])
 {
   srvr_sockaddr_union_t me;
   curl_socket_t sock = CURL_SOCKET_BAD;
@@ -2094,8 +2059,8 @@ int main(int argc, char *argv[])
         unix_socket = argv[arg];
         if(strlen(unix_socket) >= sizeof(me.sau.sun_path)) {
           fprintf(stderr,
-                  "sws: socket path must be shorter than %zu chars: %s\n",
-                  sizeof(me.sau.sun_path), unix_socket);
+                  "sws: socket path must be shorter than %u chars: %s\n",
+                  (unsigned int)sizeof(me.sau.sun_path), unix_socket);
           return 0;
         }
         socket_type = "unix";
@@ -2172,9 +2137,9 @@ int main(int argc, char *argv[])
     }
   }
 
-  msnprintf(loglockfile, sizeof(loglockfile), "%s/%s/sws-%s%s-%s.lock",
-            logdir, SERVERLOGS_LOCKDIR, protocol_type,
-            is_proxy ? "-proxy" : "", socket_type);
+  snprintf(loglockfile, sizeof(loglockfile), "%s/%s/sws-%s%s-%s.lock",
+           logdir, SERVERLOGS_LOCKDIR, protocol_type,
+           is_proxy ? "-proxy" : "", socket_type);
 
 #ifdef _WIN32
   if(win32_init())
@@ -2235,7 +2200,7 @@ int main(int argc, char *argv[])
     rc = bind_unix_socket(sock, unix_socket, &me.sau);
 #endif /* USE_UNIX_SOCKETS */
   }
-  if(0 != rc) {
+  if(rc) {
     error = SOCKERRNO;
 #ifdef USE_UNIX_SOCKETS
     if(socket_domain == AF_UNIX)
@@ -2294,14 +2259,14 @@ int main(int argc, char *argv[])
 #ifdef USE_UNIX_SOCKETS
   if(socket_domain != AF_UNIX)
 #endif
-    msnprintf(port_str, sizeof(port_str), "port %hu", port);
+    snprintf(port_str, sizeof(port_str), "port %hu", port);
 
   logmsg("Running %s %s version on %s",
          protocol_type, socket_type, location_str);
 
   /* start accepting connections */
   rc = listen(sock, 50);
-  if(0 != rc) {
+  if(rc) {
     error = SOCKERRNO;
     logmsg("listen() failed with error (%d) %s", error, sstrerror(error));
     goto sws_cleanup;
@@ -2399,12 +2364,12 @@ int main(int argc, char *argv[])
       curl_socket_t msgsock;
       do {
         msgsock = accept_connection(sock);
-        logmsg("accept_connection %" FMT_SOCKET_T
-               " returned %" FMT_SOCKET_T, sock, msgsock);
+        logmsg("accept_connection %ld returned %ld",
+               (long)sock, (long)msgsock);
         if(CURL_SOCKET_BAD == msgsock)
           goto sws_cleanup;
         if(req->delay)
-          wait_ms(req->delay);
+          curlx_wait_ms(req->delay);
       } while(msgsock > 0);
       active--;
     }
@@ -2436,7 +2401,7 @@ int main(int argc, char *argv[])
                  wait a very small amount of time before doing so. If this
                  is not done client might get an ECONNRESET before reading
                  a single byte of server-reply. */
-              wait_ms(50);
+              curlx_wait_ms(50);
 
             if(all_sockets[socket_idx] != CURL_SOCKET_BAD) {
               sclose(all_sockets[socket_idx]);
@@ -2511,7 +2476,7 @@ sws_cleanup:
 
   if(got_exit_signal) {
     logmsg("========> %s sws (%s pid: %ld) exits with signal (%d)",
-           socket_type, location_str, (long)curlx_getpid(), exit_signal);
+           socket_type, location_str, (long)our_getpid(), exit_signal);
     /*
      * To properly set the return status of the process we
      * must raise the same signal SIGINT or SIGTERM that we

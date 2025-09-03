@@ -24,7 +24,7 @@
 
 /* Testing CURLOPT_PROTOCOLS_STR */
 
-#include "test.h"
+#include "first.h"
 
 #include "memdebug.h"
 
@@ -33,7 +33,7 @@ struct pair {
   CURLcode *exp;
 };
 
-CURLcode test(char *URL)
+static CURLcode test_lib1597(char *URL)
 {
   CURL *curl = NULL;
   CURLcode res = CURLE_OK;
@@ -87,7 +87,7 @@ CURLcode test(char *URL)
       res = TEST_ERR_FAILURE;
       goto test_cleanup;
     }
-    n += msnprintf(protolist + n, sizeof(protolist) - n, ",%s", *proto);
+    n += curl_msnprintf(protolist + n, sizeof(protolist) - n, ",%s", *proto);
     if(curl_strequal(*proto, "http"))
       httpcode = CURLE_OK;
     if(curl_strequal(*proto, "https"))
@@ -98,11 +98,11 @@ CURLcode test(char *URL)
   for(i = 0; prots[i].in; i++) {
     res = curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, prots[i].in);
     if(res != *prots[i].exp) {
-      printf("unexpectedly '%s' returned %d\n", prots[i].in, res);
+      curl_mprintf("unexpectedly '%s' returned %d\n", prots[i].in, res);
       break;
     }
   }
-  printf("Tested %u strings\n", i);
+  curl_mprintf("Tested %u strings\n", i);
 
 test_cleanup:
   curl_easy_cleanup(curl);

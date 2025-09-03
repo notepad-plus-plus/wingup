@@ -28,10 +28,6 @@
 #include <fcntl.h>
 #endif
 
-#include <sys/stat.h>
-
-#include "curlx.h"
-
 #include "tool_cfgable.h"
 #include "tool_msgs.h"
 #include "tool_cb_wrt.h"
@@ -156,14 +152,13 @@ size_t tool_write_cb(char *buffer, size_t sz, size_t nmemb, void *userdata)
 
   if(config->show_headers) {
     if(bytes > (size_t)CURL_MAX_HTTP_HEADER) {
-      warnf(config->global, "Header data size exceeds single call write "
-            "limit");
+      warnf(config->global, "Header data size exceeds write limit");
       return CURL_WRITEFUNC_ERROR;
     }
   }
   else {
     if(bytes > (size_t)CURL_MAX_WRITE_SIZE) {
-      warnf(config->global, "Data size exceeds single call write limit");
+      warnf(config->global, "Data size exceeds write limit");
       return CURL_WRITEFUNC_ERROR;
     }
   }
@@ -364,7 +359,12 @@ size_t tool_write_cb(char *buffer, size_t sz, size_t nmemb, void *userdata)
 
   if(config->nobuffer) {
     /* output buffering disabled */
-    int res = fflush(outs->stream);
+    int res;
+    do {
+      res = fflush(outs->stream);
+      /* Keep retrying in the hope that it is not interrupted sometime */
+      /* !checksrc! disable ERRNOVAR 1 */
+    } while(res && errno == EINTR);
     if(res)
       return CURL_WRITEFUNC_ERROR;
   }

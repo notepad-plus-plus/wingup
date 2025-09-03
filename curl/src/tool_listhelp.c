@@ -200,7 +200,7 @@ const struct helptxt helptext[] = {
    CURLHELP_HTTP | CURLHELP_OUTPUT},
   {"    --false-start",
    "Enable TLS False Start",
-   CURLHELP_TLS},
+   CURLHELP_DEPRECATED},
   {"-F, --form <name=content>",
    "Specify multipart MIME data",
    CURLHELP_HTTP | CURLHELP_UPLOAD | CURLHELP_POST | CURLHELP_IMAP |
@@ -659,6 +659,9 @@ const struct helptxt helptext[] = {
   {"-i, --show-headers",
    "Show response headers in output",
    CURLHELP_IMPORTANT | CURLHELP_VERBOSE | CURLHELP_OUTPUT},
+  {"    --sigalgs <list>",
+   "TLS signature algorithms to use",
+   CURLHELP_TLS},
   {"-s, --silent",
    "Silent mode",
    CURLHELP_IMPORTANT | CURLHELP_VERBOSE},

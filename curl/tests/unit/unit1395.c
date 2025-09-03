@@ -21,32 +21,22 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "curlcheck.h"
-
-/* copied from urlapi.c */
-extern int dedotdotify(const char *input, size_t clen, char **out);
-
+#include "unitcheck.h"
 #include "memdebug.h"
+#include "unitprotos.h"
 
-static CURLcode unit_setup(void)
+static CURLcode test_unit1395(char *arg)
 {
-  return CURLE_OK;
-}
-
-static void unit_stop(void)
-{
-
-}
-
-struct dotdot {
-  const char *input;
-  const char *output;
-};
-
-UNITTEST_START
+  UNITTEST_BEGIN_SIMPLE
 
   unsigned int i;
   int fails = 0;
+
+  struct dotdot {
+    const char *input;
+    const char *output;
+  };
+
   const struct dotdot pairs[] = {
     { "%2f%2e%2e%2f/../a", "%2f%2e%2e%2f/a" },
     { "%2f%2e%2e%2f/../", "%2f%2e%2e%2f/" },
@@ -128,24 +118,25 @@ UNITTEST_START
     abort_if(err && out, "returned error with output");
 
     if(out && pairs[i].output && strcmp(out, pairs[i].output)) {
-      fprintf(stderr, "Test %u: '%s' gave '%s' instead of '%s'\n",
-              i, pairs[i].input, out, pairs[i].output);
+      curl_mfprintf(stderr, "Test %u: '%s' gave '%s' instead of '%s'\n",
+                    i, pairs[i].input, out, pairs[i].output);
       fail("Test case output mismatched");
       fails++;
     }
     else if((!out && pairs[i].output) ||
             (out && !pairs[i].output)) {
-      fprintf(stderr, "Test %u: '%s' gave '%s' instead of '%s'\n",
-              i, pairs[i].input, out ? out : "(null)",
-              pairs[i].output ? pairs[i].output : "(null)");
+      curl_mfprintf(stderr, "Test %u: '%s' gave '%s' instead of '%s'\n",
+                    i, pairs[i].input, out ? out : "(null)",
+                    pairs[i].output ? pairs[i].output : "(null)");
       fail("Test case output mismatched");
       fails++;
     }
     else
-      fprintf(stderr, "Test %u: OK\n", i);
+      curl_mfprintf(stderr, "Test %u: OK\n", i);
     free(out);
   }
 
   fail_if(fails, "output mismatched");
 
-UNITTEST_STOP
+  UNITTEST_END_SIMPLE
+}

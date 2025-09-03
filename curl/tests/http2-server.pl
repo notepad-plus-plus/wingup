@@ -28,6 +28,7 @@
 use Cwd;
 use Cwd 'abs_path';
 use File::Basename;
+use File::Spec;
 
 my $logdir = "log";
 my $pidfile = "$logdir/nghttpx.pid";
@@ -38,7 +39,7 @@ my $listenport2 = 9016;
 my $connect = "127.0.0.1,8990";
 my $conf = "nghttpx.conf";
 my $cert = "test-localhost";
-my $dev_null = ($^O eq 'MSWin32' ? 'NUL' : '/dev/null');
+my $dev_null = File::Spec->devnull();
 
 #***************************************************************************
 # Process command line options
@@ -96,7 +97,7 @@ while(@ARGV) {
             shift @ARGV;
         }
     }
-    else {
+    elsif($ARGV[0]) {
         print STDERR "\nWarning: http2-server.pl unknown parameter: $ARGV[0]\n";
     }
     shift @ARGV;

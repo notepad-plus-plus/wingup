@@ -23,17 +23,12 @@
  ***************************************************************************/
 #include "tool_setup.h"
 
-#include <sys/stat.h>
-
 #if defined(_WIN32) && !defined(UNDER_CE)
 #  include <direct.h>
 #endif
 
-#include "curlx.h"
-
 #include "tool_dirhie.h"
 #include "tool_msgs.h"
-#include "dynbuf.h"
 
 #include "memdebug.h" /* keep this as LAST include */
 
@@ -99,7 +94,7 @@ CURLcode create_dir_hierarchy(const char *outfile, struct GlobalConfig *global)
 {
   CURLcode result = CURLE_OK;
   size_t outlen = strlen(outfile);
-  struct curlx_dynbuf dirbuf;
+  struct dynbuf dirbuf;
 
   curlx_dyn_init(&dirbuf, outlen + 1);
 
