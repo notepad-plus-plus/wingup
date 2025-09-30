@@ -1,5 +1,4 @@
-WinGup (for Notepad++) v5.3.3 new featurs & fixed bugs:
+WinGup (for Notepad++) v5.3.4 new featurs & fixed bugs:
 
-1. Update cURL to 8.13.0 for fixing cURL's CVE-2025-0167 issue.
-2. Fix misleading Never-button in YesYesSilentNoNever-dlg when no Notepad++ behind.
-3. Make launched silent installer to run or not to run Notepad++ after installation.
+1. Update cURL to v8.15.0 to fix its security issue (CVE-2025-5399).
+
