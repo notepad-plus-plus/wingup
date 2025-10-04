@@ -860,7 +860,10 @@ bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring
 	if (res != CURLE_OK)
 	{
 		if (!isSilentMode && doAbort == false)
-			::MessageBoxA(NULL, errorBuffer, "curl error", MB_OK);
+		{
+			std::wstring errMsg = L"A fail occurred while trying to download: \n" + urlFrom + L"\n\n" + s2ws(errorBuffer);
+			::MessageBoxW(NULL, errMsg.c_str(), L"curl error", MB_OK | MB_SYSTEMMODAL); // MB_SYSTEMMODAL ... need the WS_EX_TOPMOST (due to the possible progress-dlg...)
+		}
 
 		if (doAbort)
 		{
@@ -1352,7 +1355,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 				if (dlStopped == L"")
 					dlStopped = MSGID_DOWNLOADSTOPPED;
 
-				bool isSuccessful = downloadBinary(dlUrl, dlDest, sha256ToCheck, pair<wstring, int>(extraOptions.getProxyServer(), extraOptions.getPort()), true, pair<wstring, wstring>(dlStopped, gupParams.getMessageBoxTitle()));
+				bool isSuccessful = downloadBinary(dlUrl, dlDest, sha256ToCheck, pair<wstring, int>(extraOptions.getProxyServer(), extraOptions.getPort()), false, pair<wstring, wstring>(dlStopped, gupParams.getMessageBoxTitle()));
 				if (isSuccessful)
 				{
 					isSuccessful = decompress(dlDest, destPath);
