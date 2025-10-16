@@ -1,4 +1,4 @@
-WinGup (for Notepad++) v5.3.4 new featurs & fixed bugs:
+WinGup (for Notepad++) v5.3.5 new featurs & fixed bugs:
 
-1. Update cURL to v8.15.0 to fix its security issue (CVE-2025-5399).
+1. Fix no error-message when a plugin download failed.
 
