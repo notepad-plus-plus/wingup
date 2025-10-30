@@ -929,7 +929,7 @@ bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring
 	return true;
 }
 
-bool getUpdateInfo(const string& info2get, const GupParameters& gupParams, const GupExtraOptions& proxyServer, const wstring& customParam, const wstring& version)
+bool getUpdateInfo(const string& info2get, const GupParameters& gupParams, const GupExtraOptions& proxyServer, const wstring& customParam, const wstring& version, const wstring& customInfoURL)
 {
 	char errorBuffer[CURL_ERROR_SIZE] = { 0 };
 
@@ -941,7 +941,9 @@ bool getUpdateInfo(const string& info2get, const GupParameters& gupParams, const
 	curl = curl_easy_init();
 	if (curl)
 	{
-		std::wstring urlComplete = gupParams.getInfoLocation() + L"?version=";
+		wstring infoURL = customInfoURL.empty() ? gupParams.getInfoLocation() : customInfoURL;
+
+		std::wstring urlComplete = infoURL + L"?version=";
 		if (!version.empty())
 			urlComplete += version;
 		else
@@ -1170,6 +1172,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	
 	wstring version;
 	wstring customParam;
+	wstring customInfoUrl;
 
 	ParamVector params;
 	parseCommandLine(lpszCmdLine, params);
@@ -1182,6 +1185,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	
 	getParamVal('v', params, version);
 	getParamVal('p', params, customParam);
+	getParamVal('i', params, customInfoUrl); // Optional. If empty, the value in gup.xml will be used.
 
 	// Object (gupParams) is moved here because we need app icon form configuration file
 	GupParameters gupParams(L"gup.xml");
@@ -1442,7 +1446,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 
 		isSilentMode = gupParams.isSilentMode();
 
-		bool getUpdateInfoSuccessful = getUpdateInfo(updateInfo, gupParams, extraOptions, customParam, version);
+		bool getUpdateInfoSuccessful = getUpdateInfo(updateInfo, gupParams, extraOptions, customParam, version, customInfoUrl);
 
 		if (!getUpdateInfoSuccessful)
 		{
