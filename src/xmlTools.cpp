@@ -77,18 +77,17 @@ GupParameters::GupParameters(const wchar_t * xmlFileName)
 	}
 	
 	TiXmlNode *infoURLNode = root->FirstChildElement("InfoUrl");
-	if (!infoURLNode)
-		throw exception("InfoUrl node is missed.");
 
-	TiXmlNode *iu = infoURLNode->FirstChild();
-	if (!iu)
-		throw exception("InfoUrl is missed.");
-		
-	const char *iuVal = iu->Value();
-	if (!iuVal || !(*iuVal))
-		throw exception("InfoUrl is missed.");
-	
-	_infoUrl = s2ws(iuVal);
+	if (infoURLNode)
+	{
+		TiXmlNode* iu = infoURLNode->FirstChild();
+		if (iu)
+		{
+			const char* iuVal = iu->Value();
+			if (iuVal)
+				_infoUrl = s2ws(iuVal);
+		}
+	}
 
 	TiXmlNode *classeNameNode = root->FirstChildElement("ClassName2Close");
 	if (classeNameNode)
