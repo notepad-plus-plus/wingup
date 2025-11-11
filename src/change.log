@@ -1,4 +1,4 @@
-WinGup (for Notepad++) v5.3.5 new featurs & fixed bugs:
+WinGup (for Notepad++) v5.3.6 new featurs & fixed bugs:
 
-1. Fix no error-message when a plugin download failed.
+1. Security enhancement: Make infoUrl overridable via command-line argument. 
 
