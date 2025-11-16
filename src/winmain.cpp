@@ -1172,7 +1172,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	
 	wstring version;
 	wstring customParam;
-	wstring customInfoUrl;
+
+	wstring customInfoUrl;  // if not empty, it will override infoUrl value in gup.xml
+	wstring forceDomain;    // if not empty, force GUP to ensure the download URL info belong to this domain. 
 
 	ParamVector params;
 	parseCommandLine(lpszCmdLine, params);
@@ -1186,6 +1188,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	getParamVal('v', params, version);
 	getParamVal('p', params, customParam);
 	getParamVal('i', params, customInfoUrl); // Optional. If empty, the value in gup.xml will be used.
+	getParamVal('d', params, forceDomain);   // Optional. If empty, the download URL's domain won't be controlled. The URI should be included.
 
 	// Object (gupParams) is moved here because we need app icon form configuration file
 	GupParameters gupParams(L"gup.xml");
@@ -1468,6 +1471,23 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			return 0;
 		}
 
+		bool isDomaineOK = true;
+		if (!forceDomain.empty())
+		{
+			const auto& downloadURL = gupDlInfo.getDownloadLocation();
+
+			if (downloadURL.size() <= forceDomain.size()                           // download URL must be longer than forceDomain
+				|| downloadURL.compare(0, forceDomain.size(), forceDomain) != 0)   // Check if forceDomain is a prefix of download URL
+			{
+				isDomaineOK = false;
+			}
+		}
+
+		if (!isDomaineOK)
+		{
+			WRITE_LOG(GUP_LOG_FILENAME, L"return -1 in Npp Updater part: ", L"Domain is not matched for download URL. The file download won't be processed.");
+			return -1;
+		}
 
 		//
 		// Process Update Info
