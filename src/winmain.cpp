@@ -33,6 +33,8 @@
 #include "xmlTools.h"
 #include "sha-256.h"
 #include "dpiManager.h"
+#include "Common.h"
+#include "verifySignedfile.h"
 
 #define CURL_STATICLIB
 #include "../curl/include/curl/curl.h"
@@ -59,55 +61,155 @@ static HWND hProgressDlg = nullptr;
 static HWND hProgressBar = nullptr;
 static bool doAbort = false;
 static bool stopDL = false;
-static wstring msgBoxTitle = L"";
-static wstring abortOrNot = L"";
+static wstring msgBoxTitle;
+static wstring abortOrNot;
 static wstring proxySrv = L"0.0.0.0";
-static long proxyPort  = 0;
+static long proxyPort = 0;
 static wstring winGupUserAgent = L"WinGup/";
-static wstring dlFileName = L"";
-static wstring appIconFile = L"";
-static wstring nsisSilentInstallParam = L"";
+static wstring dlFileName;
+static wstring appIconFile;
+static wstring nsisSilentInstallParam;
 
 wstring FLAG_NSIS_SILENT_INSTALL_PARAM = L"/closeRunningNpp /S /runNppAfterSilentInstall";
 
 
-const wchar_t FLAG_OPTIONS[] = L"-options";
-const wchar_t FLAG_VERBOSE[] = L"-verbose";
-const wchar_t FLAG_HELP[] = L"--help";
-const wchar_t FLAG_UUZIP[] = L"-unzipTo";
-const wchar_t FLAG_CLEANUP[] = L"-clean";
+static constexpr wchar_t MSGID_UPDATEAVAILABLE[] = L"An update package is available, do you want to download and install it?";
+static constexpr wchar_t MSGID_VERSIONCURRENT[] = L"Current version is   :";
+static constexpr wchar_t MSGID_VERSIONNEW[] = L"Available version is :";
+static constexpr wchar_t MSGID_DOWNLOADSTOPPED[] = L"Download is stopped by user. Update is aborted.";
+static constexpr wchar_t MSGID_CLOSEAPP[] = L" is opened.\rUpdater will close it in order to process the installation.\rContinue?";
+static constexpr wchar_t MSGID_ABORTORNOT[] = L"Do you want to abort update download?";
+static constexpr wchar_t MSGID_UNZIPFAILED[] = L"Can't unzip:\nOperation not permitted or decompression failed";
+static constexpr wchar_t MSGID_NODOWNLOADFOLDER[] = L"Can't find any folder for downloading.\rPlease check your environment variables\"%TMP%\", \"%TEMP%\" and \"%APPDATA%\"";
 
-const wchar_t MSGID_UPDATEAVAILABLE[] = L"An update package is available, do you want to download and install it?";
-const wchar_t MSGID_VERSIONCURRENT[] = L"Current version is   :";
-const wchar_t MSGID_VERSIONNEW[] = L"Available version is :";
-const wchar_t MSGID_DOWNLOADSTOPPED[] = L"Download is stopped by user. Update is aborted.";
-const wchar_t MSGID_CLOSEAPP[] = L" is opened.\rUpdater will close it in order to process the installation.\rContinue?";
-const wchar_t MSGID_ABORTORNOT[] = L"Do you want to abort update download?";
-const wchar_t MSGID_UNZIPFAILED[] = L"Can't unzip:\nOperation not permitted or decompression failed";
-const wchar_t MSGID_NODOWNLOADFOLDER[] = L"Can't find any folder for downloading.\rPlease check your environment variables\"%TMP%\", \"%TEMP%\" and \"%APPDATA%\"";
-const wchar_t MSGID_HELP[] = L"Usage :\r\
-\r\
-gup --help\r\
-gup -options\r\
-gup [-verbose] [-vVERSION_VALUE] [-pCUSTOM_PARAM]\r\
-gup -clean FOLDER_TO_ACTION\r\
-gup -unzipTo [-clean] FOLDER_TO_ACTION ZIP_URL\r\
-\r\
-    --help : Show this help message (and quit program).\r\
-    -options : Show the proxy configuration dialog (and quit program).\r\
-    -v : Launch GUP with VERSION_VALUE.\r\
-         VERSION_VALUE is the current version number of program to update.\r\
-         If you pass the version number as the argument,\r\
-         then the version set in the gup.xml will be overrided.\r\
-	-p : Launch GUP with CUSTOM_PARAM.\r\
-	     CUSTOM_PARAM will pass to destination by using GET method\r\
-         with argument name \"param\"\r\
-    -verbose : Show error/warning message if any.\r\
-    -clean: Delete all files in FOLDER_TO_ACTION.\r\
-    -unzipTo: Download zip file from ZIP_URL then unzip it into FOLDER_TO_ACTION.\r\
-    ZIP_URL: The URL to download zip file.\r\
-    FOLDER_TO_ACTION: The folder where we clean or/and unzip to.\r\
+static constexpr wchar_t FLAG_OPTIONS[] = L"-options";
+static constexpr wchar_t FLAG_VERBOSE[] = L"-verbose";
+static constexpr wchar_t FLAG_HELP[] = L"--help";
+
+static constexpr wchar_t FLAG_UUZIP[] = L"-unzipTo";
+static constexpr wchar_t FLAG_CLEANUP[] = L"-clean";
+
+static constexpr wchar_t FLAG_INFOURL[] = L"-infoUrl=";
+static constexpr wchar_t FLAG_FORCEDOMAIN[] = L"-forceDomain=";
+
+static constexpr wchar_t FLAG_CHKCERT_SIG[] = L"-chkCertSig=";
+static constexpr wchar_t FLAG_CHKCERT_TRUSTCHAIN[] = L"-chkCertTrustChain";
+static constexpr wchar_t FLAG_CHKCERT_REVOC[] = L"-chkCertRevoc";
+static constexpr wchar_t FLAG_CHKCERT_NAME[] = L"-chkCertName=";
+static constexpr wchar_t FLAG_CHKCERT_SUBJECT[] = L"-chkCertSubject=";
+static constexpr wchar_t FLAG_CHKCERT_KEYID[] = L"-chkCertKeyId=";
+static constexpr wchar_t FLAG_CHKCERT_AUTHORITYKEYID[] = L"-chkCertAuthorityKeyId=";
+
+static constexpr wchar_t MSGID_HELP[] =
+L"Usage:\r\n\
+\r\n\
+gup --help\r\n\
+gup -options\r\n\
+\r\n\
+    --help : Show this help message (and quit program).\r\n\
+    -options : Show the proxy configuration dialog (and quit program).\r\n\
+\r\n\
+Update mode:\r\n\
+\r\n\
+gup [-verbose] [-vVERSION_VALUE] [-pCUSTOM_PARAM]\r\n\
+\r\n\
+    -v : Launch GUP with VERSION_VALUE.\r\n\
+         VERSION_VALUE is the current version number of program to update.\r\n\
+         If you pass the version number as the argument,\r\n\
+         then the version set in the gup.xml will be overrided.\r\n\
+    -p : Launch GUP with CUSTOM_PARAM.\r\n\
+         CUSTOM_PARAM will pass to destination by using GET method\r\n\
+         with argument name \"param\"\r\n\
+    -verbose: Show error/warning message if any.\r\n\
+\r\n\
+Update mode:\r\n\
+\r\n\
+gup [-vVERSION_VALUE] [-infoUrl=URL] [-forceDomain=URL_PREFIX]\r\n\
+\r\n\
+    -infoUrl= : Use URL to override the value of \"InfoUr`\" tag in gup.xml.\r\n\
+                URL is the url to gain update and/or download information.\r\n\
+    -forceDomain= : Use URL_PREFIX to verify whether if the download link contain\r\n\
+                    the domain prifix URL_PREFIX.If not, the download won't be processed.\r\n\
+\r\n\
+Update mode:\r\n\
+\r\n\
+gup [-vVERSION_VALUE] [-infoUrl=URL] [-chkCertSig=YES_NO] [-chkCertTrustChain]\r\n\
+    [-chkCertRevoc] [-chkCertName=CERT_NAME] [-chkCertSubject=CERT_SUBNAME]\r\n\
+    [-chkCertKeyId=CERT_KEYID] [-chkCertAuthorityKeyId=CERT_AUTHORITYKEYID]\r\n\
+\r\n\
+    -chkCertSig= : Enable signature check on downloaded binary with \"-chkCertSig=yes\".\r\n\
+                   Otherwise all the other \"-chkCert*\" options will be ignored.\r\n\
+    -chkCertTrustChain : Enable signature trust chain verification.\r\n\
+    -chkCertRevoc : Enable the verification of certificate revocation state.\r\n\
+    -chkCertName= : Verify certificate name (quotes allowed for white-spaces).\r\n\
+    -chkCertSubject= : Verify subject name (quotes allowed for white-spaces).\r\n\
+    -chkCertKeyId= : Verify certificate key identifier.\r\n\
+    -chkCertAuthorityKeyId= : Verify certificate authority key identifier.\r\n\
+\r\n\
+Download & unzip mode:\r\n\
+\r\n\
+gup -clean FOLDER_TO_ACTION\r\n\
+gup -unzipTo [-clean] FOLDER_TO_ACTION ZIP_URL\r\n\
+\r\n\
+    -clean : Delete all files in FOLDER_TO_ACTION.\r\n\
+    -unzipTo : Download zip file from ZIP_URL then unzip it into FOLDER_TO_ACTION.\r\n\
+    ZIP_URL : The URL to download zip file.\r\n\
+    FOLDER_TO_ACTION : The folder where we clean or/and unzip to.\r\n\
 	";
+
+HFONT hCmdLineEditFont = nullptr;
+
+INT_PTR CALLBACK helpDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
+{
+	switch (message)
+	{
+		case WM_INITDIALOG:
+		{
+			// Center dialog on screen
+			RECT rc;
+			GetWindowRect(hDlg, &rc);
+			int x = (GetSystemMetrics(SM_CXSCREEN) - (rc.right - rc.left)) / 2;
+			int y = (GetSystemMetrics(SM_CYSCREEN) - (rc.bottom - rc.top)) / 2;
+			SetWindowPos(hDlg, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+
+			SetDlgItemText(hDlg, IDC_COMMANDLINEARGS_EDIT, MSGID_HELP);
+
+			// Create DPI-aware monospace font
+			NONCLIENTMETRICS ncm {};
+			ncm.cbSize = sizeof(NONCLIENTMETRICS);
+			SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
+
+			// Use the system font height but change to monospace
+			hCmdLineEditFont = CreateFont(
+				ncm.lfMessageFont.lfHeight,  // DPI-aware height from system
+				0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+				DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+				DEFAULT_QUALITY, FIXED_PITCH | FF_MODERN,
+				L"Lucida Console");
+
+			if (hCmdLineEditFont)
+				SendDlgItemMessage(hDlg, IDC_COMMANDLINEARGS_EDIT, WM_SETFONT, (WPARAM)hCmdLineEditFont, TRUE);
+		}
+		break;
+
+		case WM_COMMAND:
+			if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+			{
+				EndDialog(hDlg, IDOK);
+				return TRUE;
+			}
+			break;
+
+		case WM_DESTROY:
+			if (hCmdLineEditFont)
+			{
+				DeleteObject(hCmdLineEditFont);
+				hCmdLineEditFont = nullptr;
+			}
+			break;
+	}
+	return FALSE;
+}
 
 class DlgIconHelper
 {
@@ -155,21 +257,9 @@ public:
 };
 DlgIconHelper dlgIconHelper;
 
-void writeLog(const wchar_t* logFileName, const wchar_t* logSuffix, const wchar_t* log2write)
-{
-	FILE* f = _wfopen(logFileName, L"a+, ccs=UTF-16LE");
-	if (f)
-	{
-		wstring log = logSuffix;
-		log += log2write;
-		log += L'\n';
-		fwrite(log.c_str(), sizeof(log.c_str()[0]), log.length(), f);
-		fflush(f);
-		fclose(f);
-	}
-};
 
-//commandLine should contain path to n++ executable running
+
+
 void parseCommandLine(const wchar_t* commandLine, ParamVector& paramVector)
 {
 	if (!commandLine)
@@ -180,49 +270,87 @@ void parseCommandLine(const wchar_t* commandLine, ParamVector& paramVector)
 
 	wchar_t* cmdLinePtr = cmdLine;
 
-	bool isInFile = false;
+	bool isBetweenFileNameQuotes = false;
+	bool isStringInArg = false;
 	bool isInWhiteSpace = true;
+
+	int zArg = 0; // for "-z" argument: Causes Notepad++ to ignore the next command line argument (a single word, or a phrase in quotes).
+	// The only intended and supported use for this option is for the Notepad Replacement syntax.
+
+	bool shouldBeTerminated = false; // If "-z" argument has been found, zArg value will be increased from 0 to 1.
+	// then after processing next argument of "-z", zArg value will be increased from 1 to 2.
+	// when zArg == 2 shouldBeTerminated will be set to true - it will trigger the treatment which consider the rest as a argument, with or without white space(s).
+
 	size_t commandLength = lstrlen(cmdLinePtr);
-	std::vector<wchar_t *> args;
-	for (size_t i = 0; i < commandLength; ++i)
+	std::vector<wchar_t*> args;
+	for (size_t i = 0; i < commandLength && !shouldBeTerminated; ++i)
 	{
 		switch (cmdLinePtr[i])
 		{
-			case '\"': //quoted filename, ignore any following whitespace
+		case '\"': //quoted filename, ignore any following whitespace
+		{
+			if (!isStringInArg && !isBetweenFileNameQuotes && i > 0 && cmdLinePtr[i - 1] == '=')
 			{
-				if (!isInFile)	//" will always be treated as start or end of param, in case the user forgot to add an space
+				isStringInArg = true;
+			}
+			else if (isStringInArg)
+			{
+				isStringInArg = false;
+			}
+			else if (!isBetweenFileNameQuotes)	//" will always be treated as start or end of param, in case the user forgot to add an space
+			{
+				args.push_back(cmdLinePtr + i + 1);	//add next param(since zero terminated original, no overflow of +1)
+				isBetweenFileNameQuotes = true;
+				cmdLinePtr[i] = 0;
+
+				if (zArg == 1)
 				{
-					args.push_back(cmdLinePtr + i + 1);	//add next param(since zero terminated original, no overflow of +1)
+					++zArg; // zArg == 2
 				}
-				isInFile = !isInFile;
-				isInWhiteSpace = false;
-				//because we dont want to leave in any quotes in the filename, remove them now (with zero terminator)
+			}
+			else //if (isBetweenFileNameQuotes)
+			{
+				isBetweenFileNameQuotes = false;
+				//because we don't want to leave in any quotes in the filename, remove them now (with zero terminator)
 				cmdLinePtr[i] = 0;
 			}
-			break;
+			isInWhiteSpace = false;
+		}
+		break;
 
-			case '\t': //also treat tab as whitespace
-			case ' ':
+		case '\t': //also treat tab as whitespace
+		case ' ':
+		{
+			isInWhiteSpace = true;
+			if (!isBetweenFileNameQuotes && !isStringInArg)
 			{
-				isInWhiteSpace = true;
-				if (!isInFile)
-					cmdLinePtr[i] = 0;		//zap spaces into zero terminators, unless its part of a filename	
+				cmdLinePtr[i] = 0;		//zap spaces into zero terminators, unless its part of a filename
+
+				size_t argsLen = args.size();
+				if (argsLen > 0 && lstrcmp(args[argsLen - 1], L"-z") == 0)
+					++zArg; // "-z" argument is found: change zArg value from 0 (initial) to 1
 			}
-			break;
+		}
+		break;
 
-			default: //default char, if beginning of word, add it
+		default: //default wchar_t, if beginning of word, add it
+		{
+			if (!isBetweenFileNameQuotes && !isStringInArg && isInWhiteSpace)
 			{
-				if (!isInFile && isInWhiteSpace)
+				args.push_back(cmdLinePtr + i);	//add next param
+				if (zArg == 2)
 				{
-					args.push_back(cmdLinePtr + i);	//add next param
-					isInWhiteSpace = false;
+					shouldBeTerminated = true; // stop the processing, and keep the rest string as it in the vector
 				}
+
+				isInWhiteSpace = false;
 			}
+		}
 		}
 	}
 	paramVector.assign(args.begin(), args.end());
 	delete[] cmdLine;
-};
+}
 
 bool isInList(const wchar_t* token2Find, ParamVector & params)
 {
@@ -237,7 +365,7 @@ bool isInList(const wchar_t* token2Find, ParamVector & params)
 		}
 	}
 	return false;
-};
+}
 
 bool getParamVal(wchar_t c, ParamVector & params, wstring & value)
 {
@@ -250,6 +378,26 @@ bool getParamVal(wchar_t c, ParamVector & params, wstring & value)
 		if (token[0] == '-' && lstrlen(token) >= 2 && token[1] == c) //dash, and enough chars
 		{
 			value = (token + 2);
+			params.erase(params.begin() + i);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool getParamValFromString(const wchar_t* str, ParamVector& params, std::wstring& value)
+{
+	value = L"";
+	size_t nbItems = params.size();
+
+	for (size_t i = 0; i < nbItems; ++i)
+	{
+		const wchar_t* token = params.at(i).c_str();
+		std::wstring tokenStr = token;
+		size_t pos = tokenStr.find(str);
+		if (pos != std::wstring::npos && pos == 0)
+		{
+			value = (token + lstrlen(str));
 			params.erase(params.begin() + i);
 			return true;
 		}
@@ -344,40 +492,6 @@ bool deleteFileOrFolder(const wstring& f2delete)
 	return (res == 0);
 };
 
-std::string getFileContentA(const char* file2read)
-{
-	if (!::PathFileExistsA(file2read))
-		return "";
-
-	const size_t blockSize = 1024;
-	char data[blockSize];
-	std::string wholeFileContent = "";
-	FILE *fp = fopen(file2read, "rb");
-	if(!fp)
-		return "";
-
-	size_t lenFile = 0;
-	do
-	{
-		lenFile = fread(data, 1, blockSize, fp);
-		if (lenFile <= 0) break;
-		wholeFileContent.append(data, lenFile);
-	} while (lenFile > 0);
-
-	fclose(fp);
-	return wholeFileContent;
-};
-
-wstring stringReplace(wstring subject, const wstring& search, const wstring& replace)
-{
-	size_t pos = 0;
-	while ((pos = subject.find(search, pos)) != std::string::npos)
-	{
-		subject.replace(pos, search.length(), replace);
-		pos += replace.length();
-	}
-	return subject;
-}
 
 // unzipDestTo should be plugin home root + plugin folder name
 // ex: %APPDATA%\..\local\Notepad++\plugins\myAwesomePlugin
@@ -1174,7 +1288,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	wstring customParam;
 
 	wstring customInfoUrl;  // if not empty, it will override infoUrl value in gup.xml
-	wstring forceDomain;    // if not empty, force GUP to ensure the download URL info belong to this domain. 
+	wstring forceDomain;    // if not empty, force GUP to ensure the download URL info belong to this domain.
 
 	ParamVector params;
 	parseCommandLine(lpszCmdLine, params);
@@ -1187,8 +1301,66 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	
 	getParamVal('v', params, version);
 	getParamVal('p', params, customParam);
-	getParamVal('i', params, customInfoUrl); // Optional. If empty, the value in gup.xml will be used.
-	getParamVal('d', params, forceDomain);   // Optional. If empty, the download URL's domain won't be controlled. The URI should be included.
+
+	getParamValFromString(FLAG_INFOURL, params, customInfoUrl);
+	getParamValFromString(FLAG_FORCEDOMAIN, params, forceDomain);
+
+	SecurityGuard securityGuard;
+
+	bool doCheckSignature = false;
+	std::wstring checkSignatureStr;
+	if (getParamValFromString(FLAG_CHKCERT_SIG, params, checkSignatureStr))
+	{
+		doCheckSignature = checkSignatureStr == L"yes";
+	}
+
+	if (isInList(FLAG_CHKCERT_TRUSTCHAIN, params))
+	{
+		securityGuard.enableChkTrustChain();
+	}
+
+	if (isInList(FLAG_CHKCERT_REVOC, params))
+	{
+		securityGuard.enableChkRevoc();
+	}
+
+	wstring signer_display_name;
+	if (getParamValFromString(FLAG_CHKCERT_NAME, params, signer_display_name))
+	{
+		if (signer_display_name.length() >= 2 && (signer_display_name.front() == '"' && signer_display_name.back() == '"'))
+		{
+			signer_display_name = signer_display_name.substr(1, signer_display_name.length() - 2);
+		}
+
+		signer_display_name = stringReplace(signer_display_name, L"&QUOT;", L"\"");
+
+		securityGuard.setDisplayName(signer_display_name);
+	}
+
+	wstring signer_subject;
+	if (getParamValFromString(FLAG_CHKCERT_SUBJECT, params, signer_subject))
+	{
+		if (signer_subject.length() >= 2 && (signer_subject.front() == '"' && signer_subject.back() == '"'))
+		{
+			signer_subject = signer_subject.substr(1, signer_subject.length() - 2);
+		}
+
+		signer_subject = stringReplace(signer_subject, L"&QUOT;", L"\"");
+
+		securityGuard.setSubjectName(signer_subject);
+	}
+
+	wstring signer_key_id;
+	if (getParamValFromString(FLAG_CHKCERT_KEYID, params, signer_key_id))
+	{
+		securityGuard.setKeyId(signer_key_id);
+	}
+
+	wstring authority_key_id;
+	if (getParamValFromString(FLAG_CHKCERT_AUTHORITYKEYID, params, authority_key_id))
+	{
+		securityGuard.setAuthorityKeyId(authority_key_id);
+	}
 
 	// Object (gupParams) is moved here because we need app icon form configuration file
 	GupParameters gupParams(L"gup.xml");
@@ -1196,7 +1368,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 
 	if (isHelp)
 	{
-		::MessageBox(NULL, MSGID_HELP, L"GUP Command Argument Help", MB_OK);
+		//::MessageBox(NULL, MSGID_HELP, L"GUP Command Argument Help", MB_OK);
+		DialogBox(hInstance, MAKEINTRESOURCE(IDD_COMMANDLINEARGSBOX), NULL, helpDialogProc);
 		return 0;
 	}
 
@@ -1548,7 +1721,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		//
 		// Download executable bin
 		//
-
 		std::wstring dlDest = getDestDir(nativeLang, gupParams);
 		if (dlDest.empty())
 			return -1;
@@ -1574,6 +1746,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			return -1;
 		}
 
+		//
+		// Check the code signing signature if demanded
+		//
+		if (doCheckSignature)
+		{
+			bool isSecured = securityGuard.verifySignedBinary(dlDest);
+
+			if (!isSecured)
+				return -1;
+		}
 		//
 		// Run executable bin
 		//

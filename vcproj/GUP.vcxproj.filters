@@ -19,6 +19,8 @@
       <Filter>tinyxml</Filter>
     </ClCompile>
     <ClCompile Include="..\src\sha2\sha-256.cpp" />
+    <ClCompile Include="..\src\verifySignedfile.cpp" />
+    <ClCompile Include="..\src\Common.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\resource.h" />
@@ -30,6 +32,8 @@
       <Filter>tinyxml</Filter>
     </ClInclude>
     <ClInclude Include="..\src\sha2\sha-256.h" />
+    <ClInclude Include="..\src\verifySignedfile.h" />
+    <ClInclude Include="..\src\Common.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\gup.rc" />
