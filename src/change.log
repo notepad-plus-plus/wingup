@@ -1,9 +1,13 @@
-WinGup (for Notepad++) v5.3.7 new featurs & fixed bugs:
+WinGup (for Notepad++) v5.3.8 new featurs:
 
-1. Security enhancement: provide a comment line argument to verify the download URL.
+1. Security enhancement: Add checking code signing certificate ability.
+
+WinGup (for Notepad++) v5.3.7 new featurs:
+
+1. Security enhancement: Add a comment line argument (option) to verify the download URL.
 
 
-WinGup (for Notepad++) v5.3.6 new featurs & fixed bugs:
+WinGup (for Notepad++) v5.3.6 new featurs:
 
 1. Security enhancement: Make infoUrl overridable via command-line argument. 
 
