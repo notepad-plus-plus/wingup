@@ -99,6 +99,7 @@ static constexpr wchar_t FLAG_CHKCERT_NAME[] = L"-chkCertName=";
 static constexpr wchar_t FLAG_CHKCERT_SUBJECT[] = L"-chkCertSubject=";
 static constexpr wchar_t FLAG_CHKCERT_KEYID[] = L"-chkCertKeyId=";
 static constexpr wchar_t FLAG_CHKCERT_AUTHORITYKEYID[] = L"-chkCertAuthorityKeyId=";
+static constexpr wchar_t FLAG_ERRLOGPATH[] = L"-errLogPath=";
 
 static constexpr wchar_t MSGID_HELP[] =
 L"Usage:\r\n\
@@ -134,17 +135,20 @@ gup [-vVERSION_VALUE] [-infoUrl=URL] [-forceDomain=URL_PREFIX]\r\n\
 Update mode:\r\n\
 \r\n\
 gup [-vVERSION_VALUE] [-infoUrl=URL] [-chkCertSig=YES_NO] [-chkCertTrustChain]\r\n\
-    [-chkCertRevoc] [-chkCertName=CERT_NAME] [-chkCertSubject=CERT_SUBNAME]\r\n\
+    [-chkCertRevoc] [-chkCertName=\"CERT_NAME\"] [-chkCertSubject=\"CERT_SUBNAME\"]\r\n\
     [-chkCertKeyId=CERT_KEYID] [-chkCertAuthorityKeyId=CERT_AUTHORITYKEYID]\r\n\
+    [-errLogPath=\"YOUR\\ERR\\LOG\\PATH.LOG\"]\r\n\
 \r\n\
     -chkCertSig= : Enable signature check on downloaded binary with \"-chkCertSig=yes\".\r\n\
                    Otherwise all the other \"-chkCert*\" options will be ignored.\r\n\
-    -chkCertTrustChain : Enable signature trust chain verification.\r\n\
+    -chkCertTrustChain : Enable signature chain of trust verification.\r\n\
     -chkCertRevoc : Enable the verification of certificate revocation state.\r\n\
     -chkCertName= : Verify certificate name (quotes allowed for white-spaces).\r\n\
     -chkCertSubject= : Verify subject name (quotes allowed for white-spaces).\r\n\
     -chkCertKeyId= : Verify certificate key identifier.\r\n\
     -chkCertAuthorityKeyId= : Verify certificate authority key identifier.\r\n\
+    -errLogPath= : override the default error log path. The default value is:\r\n\
+                   \"%LOCALAPPDATA%\\WinGUp\\log\\securityError.log\"\r\n\
 \r\n\
 Download & unzip mode:\r\n\
 \r\n\
@@ -995,7 +999,6 @@ bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring
 	bool ok = true;
 	if (!sha2HashToCheck.empty())
 	{
-		char sha2hashStr[65] = { '\0' };
 		std::string content = getFileContentA(ws2s(destTo).c_str());
 		if (content.empty())
 		{
@@ -1005,6 +1008,7 @@ bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring
 		}
 		else
 		{
+			char sha2hashStr[65] = { '\0' };
 			uint8_t sha2hash[32];
 			calc_sha_256(sha2hash, reinterpret_cast<const uint8_t*>(content.c_str()), content.length());
 
@@ -1332,7 +1336,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			signer_display_name = signer_display_name.substr(1, signer_display_name.length() - 2);
 		}
 
-		signer_display_name = stringReplace(signer_display_name, L"&QUOT;", L"\"");
+		signer_display_name = stringReplace(signer_display_name, L"{QUOTE}", L"\"");
 
 		securityGuard.setDisplayName(signer_display_name);
 	}
@@ -1345,7 +1349,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			signer_subject = signer_subject.substr(1, signer_subject.length() - 2);
 		}
 
-		signer_subject = stringReplace(signer_subject, L"&QUOT;", L"\"");
+		signer_subject = stringReplace(signer_subject, L"{QUOTE}", L"\"");
 
 		securityGuard.setSubjectName(signer_subject);
 	}
@@ -1360,6 +1364,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	if (getParamValFromString(FLAG_CHKCERT_AUTHORITYKEYID, params, authority_key_id))
 	{
 		securityGuard.setAuthorityKeyId(authority_key_id);
+	}
+
+	wstring errLogPath;
+	if (getParamValFromString(FLAG_ERRLOGPATH, params, errLogPath))
+	{
+		if (errLogPath.length() >= 2 && (errLogPath.front() == '"' && errLogPath.back() == '"'))
+		{
+			errLogPath = errLogPath.substr(1, errLogPath.length() - 2);
+		}
+		securityGuard.setErrLogPath(errLogPath);
 	}
 
 	// Object (gupParams) is moved here because we need app icon form configuration file
@@ -1644,22 +1658,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			return 0;
 		}
 
-		bool isDomaineOK = true;
+		wstring downloadURL;
 		if (!forceDomain.empty())
 		{
-			const auto& downloadURL = gupDlInfo.getDownloadLocation();
+			downloadURL = gupDlInfo.getDownloadLocation();
 
 			if (downloadURL.size() <= forceDomain.size()                           // download URL must be longer than forceDomain
 				|| downloadURL.compare(0, forceDomain.size(), forceDomain) != 0)   // Check if forceDomain is a prefix of download URL
 			{
-				isDomaineOK = false;
+				securityGuard.writeSecurityError(L"Download URL does not match the expected domain:", downloadURL);
+				return -1;
 			}
-		}
-
-		if (!isDomaineOK)
-		{
-			WRITE_LOG(GUP_LOG_FILENAME, L"return -1 in Npp Updater part: ", L"Domain is not matched for download URL. The file download won't be processed.");
-			return -1;
 		}
 
 		//
@@ -1754,7 +1763,35 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			bool isSecured = securityGuard.verifySignedBinary(dlDest);
 
 			if (!isSecured)
+			{
+				wstring dlFileSha256;
+
+				std::string content = getFileContentA(ws2s(dlDest).c_str());
+				if (content.empty())
+				{
+					dlFileSha256 = L"No SHA-256: the file is empty.";
+				}
+				else
+				{
+					char sha2hashStr[65] {};
+					uint8_t sha2hash[32];
+					calc_sha_256(sha2hash, reinterpret_cast<const uint8_t*>(content.c_str()), content.length());
+
+					for (size_t i = 0; i < 32; i++)
+					{
+						sprintf(sha2hashStr + i * 2, "%02x", sha2hash[i]);
+					}
+
+					dlFileSha256 = L"Downloaded file SHA-256: ";
+					dlFileSha256 += s2ws(sha2hashStr);
+				}
+
+				wstring dlUrl = L"DownloadURL: ";
+				dlUrl += downloadURL;
+
+				securityGuard.writeSecurityError(dlUrl, dlFileSha256);
 				return -1;
+			}
 		}
 		//
 		// Run executable bin

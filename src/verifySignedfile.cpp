@@ -26,8 +26,10 @@
 #include <sensapi.h>
 #include <iomanip>
 #include <sstream>
+#include <shlwapi.h>
+#include <shlobj_core.h>
 #include "verifySignedfile.h"
-#include "Common.h"
+
 
 using namespace std;
 
@@ -35,17 +37,37 @@ using namespace std;
 // Debug use
 bool doLogCertifError = false;
 
+void SecurityGuard::writeSecurityError(const std::wstring& prefix, const std::wstring& log2write) const
+{
+	// Expand the environment variable
+	wstring expandedLogFileName = _errLogPath;
+	expandEnv(expandedLogFileName);
+
+	// Create the folder & sub-folders for the log file
+	wchar_t logDir[MAX_PATH];
+	lstrcpy(logDir, expandedLogFileName.c_str());
+	::PathRemoveFileSpec(logDir);
+	int result = SHCreateDirectoryEx(NULL, logDir, NULL);
+
+	// If folder doesn't exit or folder creation failed
+	if (result != ERROR_SUCCESS && result != ERROR_ALREADY_EXISTS)
+	{
+		// process %TEMP% treatment
+		wchar_t* fileName = ::PathFindFileName(expandedLogFileName.c_str());
+		expandedLogFileName = L"%TEMP%\\";
+		expandedLogFileName += fileName;
+		expandEnv(expandedLogFileName);
+	}
+
+	writeLog(expandedLogFileName.c_str(), prefix.c_str(), log2write.c_str());
+}
+
 bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 {
 	wstring display_name;
 	wstring key_id_hex;
 	wstring subject;
 	wstring authority_key_id_hex;
-
-	if (doLogCertifError)
-	{
-		writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", filepath.c_str());
-	}
 
 	//
 	// Signature verification
@@ -69,9 +91,6 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 	if (!_doCheckRevocation)
 	{
 		winTEXTrust_data.fdwRevocationChecks = WTD_REVOKE_NONE;
-
-		if (doLogCertifError)
-			writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", L"certificate revocation checking is disabled");
 	}
 	else
 	{
@@ -87,9 +106,6 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 		if (!online)
 		{
 			winTEXTrust_data.fdwRevocationChecks = WTD_REVOKE_NONE;
-
-			if (doLogCertifError)
-				writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", L"system is offline - certificate revocation won't be checked");
 		}
 	}
 
@@ -105,17 +121,13 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 
 		if (vtrust)
 		{
-			if (doLogCertifError)
-				writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", L"trust verification failed");
-
+			writeSecurityError(filepath.c_str(), L": chain of trust verification failed");
 			return false;
 		}
 
 		if (t2)
 		{
-			if (doLogCertifError)
-				writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", L"error encountered while cleaning up after WinVerifyTrust");
-
+			writeSecurityError(filepath.c_str(), L": error encountered while cleaning up after WinVerifyTrust");
 			return false;
 		}
 	}
@@ -206,9 +218,6 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 		}
 		key_id_hex = ss.str();
 
-		if (doLogCertifError)
-			writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", key_id_hex.c_str());
-
 		// Getting the display name
 		auto sze = ::CertGetNameString(context, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, NULL, NULL, 0);
 		if (sze <= 1)
@@ -265,63 +274,44 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 				LocalFree(pAuthKeyIdInfo);
 			}
 		}
-		else
-		{
-			// Authority Key Identifier extension not found
-			if (doLogCertifError)
-				writeLog(L"c:\\tmp\\certifError.log", L"Authority Key ID: ", L"Extension not found");
-		}
 		// --- End AKI Retrieval ---
 
 	}
 	catch (const string& s) {
-		if (doLogCertifError)
-		{
-			writeLog(L"c:\\tmp\\certifError.log", L" verifySignedBinary: error while getting certificate information: ", s2ws(s).c_str());
-		}
+		writeSecurityError((filepath + L" - error while getting certificate information: ").c_str(), s2ws(s).c_str());
 		status = false;
 	}
 	catch (...) {
 		// Unknown error
-		if (doLogCertifError)
-			writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", L"error while getting certificate information");
-
+		writeSecurityError(filepath.c_str(), L": Unknow error while getting certificate information");
 		status = false;
 	}
 
 	//
-	// fields verifications - if status is true, and string to compare (from the parameter) is not empty, then do compare
+	// fields verifications - if status is true, and demaded parameter string to compare (from the parameter) is not empty, then do compare
 	//
 	if (status &&  (!_signer_display_name.empty() && _signer_display_name != display_name))
 	{
 		status = false;
-
-		if (doLogCertifError)
-			writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", L"Invalid certificate display name");
+		writeSecurityError(filepath.c_str(), display_name + L": Invalid certificate display name");
 	}
 
 	if (status && (!_signer_subject.empty() && _signer_subject != subject))
 	{
 		status = false;
-
-		if (doLogCertifError)
-			writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", L"Invalid certificate subject");
+		writeSecurityError(filepath.c_str(), subject + L": Invalid certificate subject");
 	}
 
 	if (status && (!_signer_key_id.empty() && stringToUpper(_signer_key_id) != key_id_hex))
 	{
 		status = false;
-
-		if (doLogCertifError)
-			writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", L"Invalid certificate key id");
+		writeSecurityError(filepath.c_str(), key_id_hex + L": Invalid certificate key id");
 	}
 
 	if (status && (!_authority_key_id.empty() && stringToUpper(_authority_key_id) != authority_key_id_hex))
 	{
 		status = false;
-
-		if (doLogCertifError)
-			writeLog(L"c:\\tmp\\certifError.log", L"verifySignedBinary: ", L"Invalid authority key id");
+		writeSecurityError(filepath.c_str(), authority_key_id_hex + L": Invalid authority key id");
 	}
 
 	// Clean up.

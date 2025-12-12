@@ -47,6 +47,7 @@
 
 #include <string>
 #include <vector>
+#include "Common.h"
 
 class SecurityGuard final
 {
@@ -61,6 +62,11 @@ public:
 	void setKeyId(const std::wstring& signer_key_id) { _signer_key_id = signer_key_id; }
 	void setAuthorityKeyId(const std::wstring& authority_key_id) { _authority_key_id = authority_key_id; }
 
+	void setErrLogPath(std::wstring& errLogPath) { _errLogPath = errLogPath; }
+	std::wstring errLogPath() const { return _errLogPath; }
+
+	void writeSecurityError(const std::wstring& prefix, const std::wstring& log2write) const;
+
 private:
 	// Code signing certificate
 	std::wstring _signer_display_name; // = L"Notepad++"
@@ -70,5 +76,7 @@ private:
 
 	bool _doCheckRevocation = false;
 	bool _doCheckChainOfTrust = false;
+
+	std::wstring _errLogPath = L"%LOCALAPPDATA%\\WinGUp\\log\\securityError.log"; // By default, but overrideable
 };
 

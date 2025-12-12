@@ -18,6 +18,8 @@
 
 #include <string>
 
+void expandEnv(std::wstring& s);
+std::wstring getDateTimeStrFrom(const std::wstring& dateTimeFormat, const SYSTEMTIME& st);
 void writeLog(const wchar_t* logFileName, const wchar_t* logSuffix, const wchar_t* log2write);
 std::wstring s2ws(const std::string& str);
 std::string ws2s(const std::wstring& wstr);
