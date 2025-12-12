@@ -995,7 +995,6 @@ bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring
 	bool ok = true;
 	if (!sha2HashToCheck.empty())
 	{
-		char sha2hashStr[65] = { '\0' };
 		std::string content = getFileContentA(ws2s(destTo).c_str());
 		if (content.empty())
 		{
@@ -1005,6 +1004,7 @@ bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring
 		}
 		else
 		{
+			char sha2hashStr[65] = { '\0' };
 			uint8_t sha2hash[32];
 			calc_sha_256(sha2hash, reinterpret_cast<const uint8_t*>(content.c_str()), content.length());
 
@@ -1644,22 +1644,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			return 0;
 		}
 
-		bool isDomaineOK = true;
+		wstring downloadURL;
 		if (!forceDomain.empty())
 		{
-			const auto& downloadURL = gupDlInfo.getDownloadLocation();
+			downloadURL = gupDlInfo.getDownloadLocation();
 
 			if (downloadURL.size() <= forceDomain.size()                           // download URL must be longer than forceDomain
 				|| downloadURL.compare(0, forceDomain.size(), forceDomain) != 0)   // Check if forceDomain is a prefix of download URL
 			{
-				isDomaineOK = false;
+				securityGuard.writeSecurityError(L"Domain is not matched for download URL:", downloadURL);
+				return -1;
 			}
-		}
-
-		if (!isDomaineOK)
-		{
-			WRITE_LOG(GUP_LOG_FILENAME, L"return -1 in Npp Updater part: ", L"Domain is not matched for download URL. The file download won't be processed.");
-			return -1;
 		}
 
 		//
@@ -1754,7 +1749,35 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			bool isSecured = securityGuard.verifySignedBinary(dlDest);
 
 			if (!isSecured)
+			{
+				wstring dlFileSha256;
+
+				std::string content = getFileContentA(ws2s(dlDest).c_str());
+				if (content.empty())
+				{
+					dlFileSha256 = L"No SHA-256: the file is empty.";
+				}
+				else
+				{
+					char sha2hashStr[65] {};
+					uint8_t sha2hash[32];
+					calc_sha_256(sha2hash, reinterpret_cast<const uint8_t*>(content.c_str()), content.length());
+
+					for (size_t i = 0; i < 32; i++)
+					{
+						sprintf(sha2hashStr + i * 2, "%02x", sha2hash[i]);
+					}
+
+					dlFileSha256 = L"Downloadeed file SHA-256: ";
+					dlFileSha256 += s2ws(sha2hashStr);
+				}
+
+				wstring dlUrl = L"DownloadURL: ";
+				dlUrl += downloadURL;
+
+				securityGuard.writeSecurityError(dlUrl, dlFileSha256);
 				return -1;
+			}
 		}
 		//
 		// Run executable bin

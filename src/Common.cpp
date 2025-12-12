@@ -23,15 +23,149 @@
 
 using namespace std;
 
-void writeLog(const wchar_t* logFileName, const wchar_t* logSuffix, const wchar_t* log2write)
+void expandEnv(wstring& s)
 {
-	FILE* f = _wfopen(logFileName, L"a+, ccs=UTF-16LE");
+	wchar_t buffer[MAX_PATH] = { '\0' };
+	// This returns the resulting string length or 0 in case of error.
+	DWORD ret = ExpandEnvironmentStrings(s.c_str(), buffer, static_cast<DWORD>(std::size(buffer)));
+	if (ret != 0)
+	{
+		if (ret == static_cast<DWORD>(lstrlen(buffer) + 1))
+		{
+			s = buffer;
+		}
+		else
+		{
+			// Buffer was too small, try with a bigger buffer of the required size.
+			std::vector<wchar_t> buffer2(ret, 0);
+			ret = ExpandEnvironmentStrings(s.c_str(), buffer2.data(), static_cast<DWORD>(buffer2.size()));
+			s = buffer2.data();
+		}
+	}
+}
+
+namespace
+{
+	constexpr wchar_t timeFmtEscapeChar = 0x1;
+	constexpr wchar_t middayFormat[] = L"tt";
+
+	// Returns AM/PM string defined by the system locale for the specified time.
+	// This string may be empty or customized.
+	wstring getMiddayString(const wchar_t* localeName, const SYSTEMTIME& st)
+	{
+		wstring midday;
+		midday.resize(MAX_PATH);
+		int ret = GetTimeFormatEx(localeName, 0, &st, middayFormat, &midday[0], static_cast<int>(midday.size()));
+		if (ret > 0)
+			midday.resize(ret - 1); // Remove the null-terminator.
+		else
+			midday.clear();
+		return midday;
+	}
+
+	// Replaces conflicting time format specifiers by a special character.
+	bool escapeTimeFormat(wstring& format)
+	{
+		bool modified = false;
+		for (auto& ch : format)
+		{
+			if (ch == middayFormat[0])
+			{
+				ch = timeFmtEscapeChar;
+				modified = true;
+			}
+		}
+		return modified;
+	}
+
+	// Replaces special time format characters by actual AM/PM string.
+	void unescapeTimeFormat(wstring& format, const wstring& midday)
+	{
+		if (midday.empty())
+		{
+			auto it = std::remove(format.begin(), format.end(), timeFmtEscapeChar);
+			if (it != format.end())
+				format.erase(it, format.end());
+		}
+		else
+		{
+			size_t i = 0;
+			while ((i = format.find(timeFmtEscapeChar, i)) != wstring::npos)
+			{
+				if (i + 1 < format.size() && format[i + 1] == timeFmtEscapeChar)
+				{
+					// 'tt' => AM/PM
+					format.erase(i, std::size(middayFormat) - 1);
+					format.insert(i, midday);
+				}
+				else
+				{
+					// 't' => A/P
+					format[i] = midday[0];
+				}
+			}
+		}
+	}
+}
+
+wstring getDateTimeStrFrom(const wstring& dateTimeFormat, const SYSTEMTIME& st)
+{
+	const wchar_t* localeName = LOCALE_NAME_USER_DEFAULT;
+	const DWORD flags = 0;
+
+	constexpr int bufferSize = MAX_PATH;
+	wchar_t buffer[bufferSize] = {};
+	int ret = 0;
+
+
+	// 1. Escape 'tt' that means AM/PM or 't' that means A/P.
+	// This is needed to avoid conflict with 'M' date format that stands for month.
+	wstring newFormat = dateTimeFormat;
+	const bool hasMiddayFormat = escapeTimeFormat(newFormat);
+
+	// 2. Format the time (h/m/s/t/H).
+	ret = GetTimeFormatEx(localeName, flags, &st, newFormat.c_str(), buffer, bufferSize);
+	if (ret != 0)
+	{
+		// 3. Format the date (d/y/g/M). 
+		// Now use the buffer as a format string to process the format specifiers not recognized by GetTimeFormatEx().
+		ret = GetDateFormatEx(localeName, flags, &st, buffer, buffer, bufferSize, nullptr);
+	}
+
+	if (ret != 0)
+	{
+		if (hasMiddayFormat)
+		{
+			// 4. Now format only the AM/PM string.
+			const wstring midday = getMiddayString(localeName, st);
+			wstring result = buffer;
+			unescapeTimeFormat(result, midday);
+			return result;
+		}
+		return buffer;
+	}
+
+	return {};
+}
+
+void writeLog(const wchar_t* logFileName, const wchar_t* logPrefix, const wchar_t* log2write)
+{
+	wstring expandedLogFileName = logFileName;
+	expandEnv(expandedLogFileName);
+
+	FILE* f = _wfopen(expandedLogFileName.c_str(), L"a+, ccs=UTF-16LE");
 	if (f)
 	{
-		wstring log = logSuffix;
-		log += log2write;
-		log += L'\n';
-		fwrite(log.c_str(), sizeof(log.c_str()[0]), log.length(), f);
+		SYSTEMTIME currentTime = {};
+		::GetLocalTime(&currentTime);
+		wstring log2writeStr = getDateTimeStrFrom(L"yyyy-MM-dd HH:mm:ss", currentTime);
+
+		log2writeStr += L"  ";
+		log2writeStr += logPrefix;
+		log2writeStr += L" ";
+		log2writeStr += log2write;
+		log2writeStr += L'\n';
+		fwrite(log2writeStr.c_str(), sizeof(log2writeStr.c_str()[0]), log2writeStr.length(), f);
 		fflush(f);
 		fclose(f);
 	}
