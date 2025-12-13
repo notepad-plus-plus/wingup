@@ -1332,7 +1332,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			signer_display_name = signer_display_name.substr(1, signer_display_name.length() - 2);
 		}
 
-		signer_display_name = stringReplace(signer_display_name, L"&QUOT;", L"\"");
+		signer_display_name = stringReplace(signer_display_name, L"{QUOTE}", L"\"");
 
 		securityGuard.setDisplayName(signer_display_name);
 	}
@@ -1345,7 +1345,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			signer_subject = signer_subject.substr(1, signer_subject.length() - 2);
 		}
 
-		signer_subject = stringReplace(signer_subject, L"&QUOT;", L"\"");
+		signer_subject = stringReplace(signer_subject, L"{QUOTE}", L"\"");
 
 		securityGuard.setSubjectName(signer_subject);
 	}
@@ -1768,7 +1768,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 						sprintf(sha2hashStr + i * 2, "%02x", sha2hash[i]);
 					}
 
-					dlFileSha256 = L"Downloadeed file SHA-256: ";
+					dlFileSha256 = L"Downloaded file SHA-256: ";
 					dlFileSha256 += s2ws(sha2hashStr);
 				}
 
