@@ -65,9 +65,7 @@ public:
 	void setErrLogPath(std::wstring& errLogPath) { _errLogPath = errLogPath; }
 	std::wstring errLogPath() const { return _errLogPath; }
 
-	void writeSecurityError(const std::wstring& prefix, const std::wstring& log2write) {
-		writeLog(_errLogPath.c_str(), prefix.c_str(), log2write.c_str());
-	}
+	void writeSecurityError(const std::wstring& prefix, const std::wstring& log2write) const;
 
 private:
 	// Code signing certificate

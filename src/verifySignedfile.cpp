@@ -26,6 +26,8 @@
 #include <sensapi.h>
 #include <iomanip>
 #include <sstream>
+#include <shlwapi.h>
+#include <shlobj_core.h>
 #include "verifySignedfile.h"
 
 
@@ -34,6 +36,31 @@ using namespace std;
 
 // Debug use
 bool doLogCertifError = false;
+
+void SecurityGuard::writeSecurityError(const std::wstring& prefix, const std::wstring& log2write) const
+{
+	// Expand the environment variable
+	wstring expandedLogFileName = _errLogPath;
+	expandEnv(expandedLogFileName);
+
+	// Create the folder & sub-folders for the log file
+	wchar_t logDir[MAX_PATH];
+	lstrcpy(logDir, expandedLogFileName.c_str());
+	::PathRemoveFileSpec(logDir);
+	int result = SHCreateDirectoryEx(NULL, logDir, NULL);
+
+	// If folder doesn't exit or folder creation failed
+	if (result != ERROR_SUCCESS && result != ERROR_ALREADY_EXISTS)
+	{
+		// process %TEMP% treatment
+		wchar_t* fileName = ::PathFindFileName(expandedLogFileName.c_str());
+		expandedLogFileName = L"%TEMP%\\";
+		expandedLogFileName += fileName;
+		expandEnv(expandedLogFileName);
+	}
+
+	writeLog(expandedLogFileName.c_str(), prefix.c_str(), log2write.c_str());
+}
 
 bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 {

@@ -18,6 +18,7 @@
 #include <fstream>
 #include <algorithm>
 #include <shlwapi.h>
+#include <shlobj_core.h>
 #include <vector>
 #include "Common.h"
 
@@ -150,10 +151,7 @@ wstring getDateTimeStrFrom(const wstring& dateTimeFormat, const SYSTEMTIME& st)
 
 void writeLog(const wchar_t* logFileName, const wchar_t* logPrefix, const wchar_t* log2write)
 {
-	wstring expandedLogFileName = logFileName;
-	expandEnv(expandedLogFileName);
-
-	FILE* f = _wfopen(expandedLogFileName.c_str(), L"a+, ccs=UTF-16LE");
+	FILE* f = _wfopen(logFileName, L"a+, ccs=UTF-16LE");
 	if (f)
 	{
 		SYSTEMTIME currentTime = {};
