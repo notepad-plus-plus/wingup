@@ -121,7 +121,7 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 
 		if (vtrust)
 		{
-			writeSecurityError(filepath.c_str(), L": trust verification failed");
+			writeSecurityError(filepath.c_str(), L": chain of trust verification failed");
 			return false;
 		}
 

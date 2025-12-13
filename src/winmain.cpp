@@ -99,6 +99,7 @@ static constexpr wchar_t FLAG_CHKCERT_NAME[] = L"-chkCertName=";
 static constexpr wchar_t FLAG_CHKCERT_SUBJECT[] = L"-chkCertSubject=";
 static constexpr wchar_t FLAG_CHKCERT_KEYID[] = L"-chkCertKeyId=";
 static constexpr wchar_t FLAG_CHKCERT_AUTHORITYKEYID[] = L"-chkCertAuthorityKeyId=";
+static constexpr wchar_t FLAG_ERRLOGPATH[] = L"-errLogPath=";
 
 static constexpr wchar_t MSGID_HELP[] =
 L"Usage:\r\n\
@@ -134,17 +135,20 @@ gup [-vVERSION_VALUE] [-infoUrl=URL] [-forceDomain=URL_PREFIX]\r\n\
 Update mode:\r\n\
 \r\n\
 gup [-vVERSION_VALUE] [-infoUrl=URL] [-chkCertSig=YES_NO] [-chkCertTrustChain]\r\n\
-    [-chkCertRevoc] [-chkCertName=CERT_NAME] [-chkCertSubject=CERT_SUBNAME]\r\n\
+    [-chkCertRevoc] [-chkCertName=\"CERT_NAME\][-chkCertSubject = \"CERT_SUBNAME\"]\r\n\
     [-chkCertKeyId=CERT_KEYID] [-chkCertAuthorityKeyId=CERT_AUTHORITYKEYID]\r\n\
+    [-errLogPath=\"YOUR\\ERR\\LOG\\PATH.LOG\"]\r\n\
 \r\n\
     -chkCertSig= : Enable signature check on downloaded binary with \"-chkCertSig=yes\".\r\n\
                    Otherwise all the other \"-chkCert*\" options will be ignored.\r\n\
-    -chkCertTrustChain : Enable signature trust chain verification.\r\n\
+    -chkCertTrustChain : Enable signature chain of trust verification.\r\n\
     -chkCertRevoc : Enable the verification of certificate revocation state.\r\n\
     -chkCertName= : Verify certificate name (quotes allowed for white-spaces).\r\n\
     -chkCertSubject= : Verify subject name (quotes allowed for white-spaces).\r\n\
     -chkCertKeyId= : Verify certificate key identifier.\r\n\
     -chkCertAuthorityKeyId= : Verify certificate authority key identifier.\r\n\
+    -errLogPath= : override the default error log path. The default value is:\r\n\
+                   \"%LOCALAPPDATA%\\WinGUp\\log\\securityError.log\"\r\n\
 \r\n\
 Download & unzip mode:\r\n\
 \r\n\
@@ -1362,6 +1366,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		securityGuard.setAuthorityKeyId(authority_key_id);
 	}
 
+	wstring errLogPath;
+	if (getParamValFromString(FLAG_ERRLOGPATH, params, errLogPath))
+	{
+		securityGuard.setErrLogPath(errLogPath);
+	}
+
 	// Object (gupParams) is moved here because we need app icon form configuration file
 	GupParameters gupParams(L"gup.xml");
 	appIconFile = gupParams.getSoftwareIcon();
@@ -1652,7 +1662,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			if (downloadURL.size() <= forceDomain.size()                           // download URL must be longer than forceDomain
 				|| downloadURL.compare(0, forceDomain.size(), forceDomain) != 0)   // Check if forceDomain is a prefix of download URL
 			{
-				securityGuard.writeSecurityError(L"Domain is not matched for download URL:", downloadURL);
+				securityGuard.writeSecurityError(L"Download URL does not match the expected domain:", downloadURL);
 				return -1;
 			}
 		}
