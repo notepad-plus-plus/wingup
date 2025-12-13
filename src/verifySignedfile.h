@@ -77,6 +77,6 @@ private:
 	bool _doCheckRevocation = false;
 	bool _doCheckChainOfTrust = false;
 
-	std::wstring _errLogPath = L"%LOCALUSERDATA%\\WinGUp\\log\\securityError.log"; // By default, but overrideable
+	std::wstring _errLogPath = L"%LOCALAPPDATA%\\WinGUp\\log\\securityError.log"; // By default, but overrideable
 };
 

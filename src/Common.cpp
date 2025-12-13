@@ -18,7 +18,6 @@
 #include <fstream>
 #include <algorithm>
 #include <shlwapi.h>
-#include <shlobj_core.h>
 #include <vector>
 #include "Common.h"
 
