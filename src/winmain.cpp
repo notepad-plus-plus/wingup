@@ -135,7 +135,7 @@ gup [-vVERSION_VALUE] [-infoUrl=URL] [-forceDomain=URL_PREFIX]\r\n\
 Update mode:\r\n\
 \r\n\
 gup [-vVERSION_VALUE] [-infoUrl=URL] [-chkCertSig=YES_NO] [-chkCertTrustChain]\r\n\
-    [-chkCertRevoc] [-chkCertName=\"CERT_NAME\][-chkCertSubject = \"CERT_SUBNAME\"]\r\n\
+    [-chkCertRevoc] [-chkCertName=\"CERT_NAME\"] [-chkCertSubject=\"CERT_SUBNAME\"]\r\n\
     [-chkCertKeyId=CERT_KEYID] [-chkCertAuthorityKeyId=CERT_AUTHORITYKEYID]\r\n\
     [-errLogPath=\"YOUR\\ERR\\LOG\\PATH.LOG\"]\r\n\
 \r\n\
