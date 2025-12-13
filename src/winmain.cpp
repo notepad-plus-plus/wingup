@@ -1369,6 +1369,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	wstring errLogPath;
 	if (getParamValFromString(FLAG_ERRLOGPATH, params, errLogPath))
 	{
+		if (errLogPath.length() >= 2 && (errLogPath.front() == '"' && errLogPath.back() == '"')) ^ M
+		{
+			errLogPath = errLogPath.substr(1, errLogPath.length() - 2); ^ M
+		}
 		securityGuard.setErrLogPath(errLogPath);
 	}
 
