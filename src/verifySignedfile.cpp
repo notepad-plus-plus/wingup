@@ -293,25 +293,45 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 	if (status &&  (!_signer_display_name.empty() && _signer_display_name != display_name))
 	{
 		status = false;
-		writeSecurityError(filepath.c_str(), display_name + L": Invalid certificate display name");
+		wstring errMsg = L"Invalid certificate display name: ";
+		errMsg += L"expected ";
+		errMsg += _signer_display_name;
+		errMsg += L" vs unexpected ";
+		errMsg += display_name;
+		writeSecurityError(filepath.c_str(), errMsg);
 	}
 
 	if (status && (!_signer_subject.empty() && _signer_subject != subject))
 	{
 		status = false;
-		writeSecurityError(filepath.c_str(), subject + L": Invalid certificate subject");
+		wstring errMsg = L"Invalid certificate subject: ";
+		errMsg += L"expected ";
+		errMsg += _signer_subject;
+		errMsg += L" vs unexpected ";
+		errMsg += subject;
+		writeSecurityError(filepath.c_str(), errMsg);
 	}
 
 	if (status && (!_signer_key_id.empty() && stringToUpper(_signer_key_id) != key_id_hex))
 	{
 		status = false;
-		writeSecurityError(filepath.c_str(), key_id_hex + L": Invalid certificate key id");
+		wstring errMsg = L"Invalid certificate key id: ";
+		errMsg += L"expected ";
+		errMsg += _signer_key_id;
+		errMsg += L" vs unexpected ";
+		errMsg += key_id_hex;
+		writeSecurityError(filepath.c_str(), errMsg);
 	}
 
 	if (status && (!_authority_key_id.empty() && stringToUpper(_authority_key_id) != authority_key_id_hex))
 	{
 		status = false;
-		writeSecurityError(filepath.c_str(), authority_key_id_hex + L": Invalid authority key id");
+		wstring errMsg = L"Invalid authority key id: ";
+		errMsg += L"expected ";
+		errMsg += _authority_key_id;
+		errMsg += L" vs unexpected ";
+		errMsg += authority_key_id_hex;
+		writeSecurityError(filepath.c_str(), errMsg);
 	}
 
 	// Clean up.
