@@ -62,22 +62,24 @@ void SecurityGuard::writeSecurityError(const std::wstring& prefix, const std::ws
 	writeLog(expandedLogFileName.c_str(), prefix.c_str(), log2write.c_str());
 }
 
-bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
+bool SecurityGuard::initFromSelfCertif()
 {
-	wstring display_name;
-	wstring key_id_hex;
-	wstring subject;
-	wstring authority_key_id_hex;
+	wchar_t codeSigedBinPath[MAX_PATH]{};
+	::GetModuleFileName(NULL, codeSigedBinPath, MAX_PATH);
 
+	return verifySignatureAndGetInfo(codeSigedBinPath, _signer_display_name, _signer_key_id, _signer_subject, _authority_key_id);
+}
+
+bool SecurityGuard::verifySignatureAndGetInfo(const std::wstring& codeSigedBinPath, wstring& display_name, wstring& key_id_hex, wstring& subject, wstring& authority_key_id_hex)
+{
 	//
 	// Signature verification
 	//
 
 	// Initialize the WINTRUST_FILE_INFO structure.
-	LPCWSTR pwszfilepath = filepath.c_str();
 	WINTRUST_FILE_INFO file_data = {};
 	file_data.cbStruct = sizeof(WINTRUST_FILE_INFO);
-	file_data.pcwszFilePath = pwszfilepath;
+	file_data.pcwszFilePath = codeSigedBinPath.c_str();
 
 	// Initialise WinTrust data
 	WINTRUST_DATA winTEXTrust_data = {};
@@ -121,13 +123,13 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 
 		if (vtrust)
 		{
-			writeSecurityError(filepath.c_str(), L": chain of trust verification failed");
+			writeSecurityError(codeSigedBinPath, L": chain of trust verification failed");
 			return false;
 		}
 
 		if (t2)
 		{
-			writeSecurityError(filepath.c_str(), L": error encountered while cleaning up after WinVerifyTrust");
+			writeSecurityError(codeSigedBinPath, L": error encountered while cleaning up after WinVerifyTrust");
 			return false;
 		}
 	}
@@ -143,14 +145,14 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 	bool status = true;
 
 	try {
-		BOOL result = ::CryptQueryObject(CERT_QUERY_OBJECT_FILE, filepath.c_str(),
+			BOOL result = ::CryptQueryObject(CERT_QUERY_OBJECT_FILE, codeSigedBinPath.c_str(),
 			CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED, CERT_QUERY_FORMAT_FLAG_BINARY, 0,
 			&dwEncoding, &dwContentType, &dwFormatType,
 			&hStore, &hMsg, NULL);
 
 		if (!result)
 		{
-			throw string("Checking certificate of ") + ws2s(filepath) + " : " + ws2s(GetLastErrorAsString(GetLastError()));
+			throw string("Checking certificate of ") + ws2s(codeSigedBinPath) + " : " + ws2s(GetLastErrorAsString(GetLastError()));
 		}
 
 		// Get signer information size.
@@ -235,13 +237,12 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 
 
 		// --- Retrieve Authority Key Identifier (AKI) ---
-
-		PCERT_EXTENSION pExtension = ::CertFindExtension(szOID_AUTHORITY_KEY_IDENTIFIER2, // OID for Authority Key Identifier (2.5.29.35)
-			context->pCertInfo->cExtension,	context->pCertInfo->rgExtension);
+		// OID for Authority Key Identifier (2.5.29.35)
+		PCERT_EXTENSION pExtension = ::CertFindExtension(szOID_AUTHORITY_KEY_IDENTIFIER2, context->pCertInfo->cExtension, context->pCertInfo->rgExtension);
 
 		if (!pExtension)
-			pExtension = ::CertFindExtension(szOID_AUTHORITY_KEY_IDENTIFIER, // OID for Authority Key Identifier (2.5.29.1)
-				context->pCertInfo->cExtension, context->pCertInfo->rgExtension);
+			// OID for Authority Key Identifier (2.5.29.1)
+			pExtension = ::CertFindExtension(szOID_AUTHORITY_KEY_IDENTIFIER, context->pCertInfo->cExtension, context->pCertInfo->rgExtension);
 
 		if (pExtension)
 		{
@@ -278,14 +279,34 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 
 	}
 	catch (const string& s) {
-		writeSecurityError((filepath + L" - error while getting certificate information: ").c_str(), s2ws(s).c_str());
+		wstring msg = codeSigedBinPath;
+		msg += L" - error while getting certificate information: ";
+		writeSecurityError(msg, s2ws(s));
 		status = false;
 	}
 	catch (...) {
 		// Unknown error
-		writeSecurityError(filepath.c_str(), L": Unknow error while getting certificate information");
+		writeSecurityError(codeSigedBinPath, L": Unknow error while getting certificate information");
 		status = false;
 	}
+
+	// Clean up.
+
+	if (hStore != NULL)       CertCloseStore(hStore, 0);
+	if (hMsg != NULL)       CryptMsgClose(hMsg);
+	if (pSignerInfo != NULL)  LocalFree(pSignerInfo);
+
+	return status;
+}
+
+bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
+{
+	wstring display_name;
+	wstring key_id_hex;
+	wstring subject;
+	wstring authority_key_id_hex;
+
+	bool status = verifySignatureAndGetInfo(filepath, display_name, key_id_hex, subject, authority_key_id_hex);
 
 	//
 	// fields verifications - if status is true, and demaded parameter string to compare (from the parameter) is not empty, then do compare
@@ -298,7 +319,7 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 		errMsg += _signer_display_name;
 		errMsg += L" vs unexpected ";
 		errMsg += display_name;
-		writeSecurityError(filepath.c_str(), errMsg);
+		writeSecurityError(filepath, errMsg);
 	}
 
 	if (status && (!_signer_subject.empty() && _signer_subject != subject))
@@ -309,7 +330,7 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 		errMsg += _signer_subject;
 		errMsg += L" vs unexpected ";
 		errMsg += subject;
-		writeSecurityError(filepath.c_str(), errMsg);
+		writeSecurityError(filepath, errMsg);
 	}
 
 	if (status && (!_signer_key_id.empty() && stringToUpper(_signer_key_id) != key_id_hex))
@@ -320,7 +341,7 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 		errMsg += _signer_key_id;
 		errMsg += L" vs unexpected ";
 		errMsg += key_id_hex;
-		writeSecurityError(filepath.c_str(), errMsg);
+		writeSecurityError(filepath, errMsg);
 	}
 
 	if (status && (!_authority_key_id.empty() && stringToUpper(_authority_key_id) != authority_key_id_hex))
@@ -331,14 +352,8 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 		errMsg += _authority_key_id;
 		errMsg += L" vs unexpected ";
 		errMsg += authority_key_id_hex;
-		writeSecurityError(filepath.c_str(), errMsg);
+		writeSecurityError(filepath, errMsg);
 	}
-
-	// Clean up.
-
-	if (hStore != NULL)       CertCloseStore(hStore, 0);
-	if (hMsg != NULL)       CryptMsgClose(hMsg);
-	if (pSignerInfo != NULL)  LocalFree(pSignerInfo);
 
 	return status;
 }
