@@ -1461,7 +1461,28 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			deleteFileOrFolder(destPath);
 		}
 
-		::ShellExecute(NULL, L"open", L"explorer.exe", prog2Launch.c_str(), prog2LaunchDir, SW_SHOWNORMAL);
+
+
+#ifdef _DEBUG
+		// Don't check any thing in debug mode
+#else
+		// Check signature of the launched program, with the same certif as gup.exe
+		SecurityGuard securityGuard4PluginsInstall;
+
+		if (!securityGuard4PluginsInstall.initFromSelfCertif())
+		{
+			securityGuard.writeSecurityError(L"Above certificate init error from \"gup -clean\" (remove plugins)", L"");
+			return -1;
+		}
+
+		bool isSecured = securityGuard4PluginsInstall.verifySignedBinary(prog2Launch.c_str());
+		if (!isSecured)
+		{
+			securityGuard.writeSecurityError(L"Above certificate verification error from \"gup -clean\" (remove plugins)", L"");
+			return -1;
+		}
+#endif
+		::ShellExecute(NULL, L"open", prog2Launch.c_str(), NULL, prog2LaunchDir, SW_SHOWNORMAL);
 
 		return 0;
 	}
@@ -1480,12 +1501,32 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			WRITE_LOG(GUP_LOG_FILENAME, L"-1 in plugin updater's part - if (isCleanUp && isUnzip) // update: ", L"nbParam < 3");
 			return -1;
 		}
+
 		wstring prog2Launch = params[0];
 		wchar_t prog2LaunchDir[MAX_PATH];
 		lstrcpy(prog2LaunchDir, prog2Launch.c_str());
 		::PathRemoveFileSpec(prog2LaunchDir);
 		wstring destPathRoot = params[1];
 
+#ifdef _DEBUG
+		// Don't check any thing in debug mode
+#else
+		// Check signature of the launched program, with the same certif as gup.exe
+		SecurityGuard securityGuard4PluginsInstall;
+
+		if (!securityGuard4PluginsInstall.initFromSelfCertif())
+		{
+			securityGuard.writeSecurityError(L"Above certificate init error from \"gup -unzip\" (install or update plugins)", L"");
+			return -1;
+		}
+
+		bool isSecured = securityGuard4PluginsInstall.verifySignedBinary(prog2Launch.c_str());
+		if (!isSecured)
+		{
+			securityGuard.writeSecurityError(L"Above certificate verification error from \"gup -unzip\" (install or update plugins)", L"");
+			return -1;
+		}
+#endif
 		for (size_t i = 2; i < nbParam; ++i)
 		{
 			wstring destPath = destPathRoot;
@@ -1593,7 +1634,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			}
 		}
 
-		::ShellExecute(NULL, L"open", L"explorer.exe", prog2Launch.c_str(), prog2LaunchDir, SW_SHOWNORMAL);
+		::ShellExecute(NULL, L"open", prog2Launch.c_str(), NULL, prog2LaunchDir, SW_SHOWNORMAL);
+
 		return 0;
 	}
 

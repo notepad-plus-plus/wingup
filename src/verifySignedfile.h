@@ -53,8 +53,11 @@ class SecurityGuard final
 {
 public:
 	SecurityGuard(){};
-	bool verifySignedBinary(const std::wstring& filepath);
+	bool initFromSelfCertif();
 
+	bool verifySignatureAndGetInfo(const std::wstring& codeSigedBinPath, std::wstring& display_name, std::wstring& key_id_hex, std::wstring& subject, std::wstring& authority_key_id_hex);
+	bool verifySignedBinary(const std::wstring& filepath);
+	
 	void enableChkRevoc() { _doCheckRevocation = true; }
 	void enableChkTrustChain() { _doCheckChainOfTrust = true; }
 	void setDisplayName(const std::wstring& signer_display_name) { _signer_display_name = signer_display_name; }
