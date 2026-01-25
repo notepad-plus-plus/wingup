@@ -99,6 +99,8 @@ static constexpr wchar_t FLAG_CHKCERT_NAME[] = L"-chkCertName=";
 static constexpr wchar_t FLAG_CHKCERT_SUBJECT[] = L"-chkCertSubject=";
 static constexpr wchar_t FLAG_CHKCERT_KEYID[] = L"-chkCertKeyId=";
 static constexpr wchar_t FLAG_CHKCERT_AUTHORITYKEYID[] = L"-chkCertAuthorityKeyId=";
+static constexpr wchar_t FLAG_CHKCERT_XML[] = L"-chkCert4InfoXML";
+static constexpr wchar_t FLAG_CHKCERT_KEYID_XML[] = L"-chkCertKeyId4XML=";
 static constexpr wchar_t FLAG_ERRLOGPATH[] = L"-errLogPath=";
 
 static constexpr wchar_t MSGID_HELP[] =
@@ -149,6 +151,16 @@ gup [-vVERSION_VALUE] [-infoUrl=URL] [-chkCertSig=YES_NO] [-chkCertTrustChain]\r
     -chkCertAuthorityKeyId= : Verify certificate authority key identifier.\r\n\
     -errLogPath= : override the default error log path. The default value is:\r\n\
                    \"%LOCALAPPDATA%\\WinGUp\\log\\securityError.log\"\r\n\
+\r\n\
+Update mode:\r\n\
+\r\n\
+gup [-vVERSION_VALUE] [-infoUrl=URL] [-chkCertKeyId=CERT_KEYID]\r\n\
+\r\n\
+    -chkCert4InfoXML : Enable signature check for XML (XMLDsig) returned from server.\r\n\
+                       Enable this when the server signs the XML; it ensure the XML\r\n\
+                       has not been altered or hijacked.\r\n\
+    -chkCertKeyId4XML= : Use the certificate Key ID for authentication. If ignored,\r\n\
+                         only XML integrity is checked; authentication is not verified.\r\n\
 \r\n\
 Download & unzip mode:\r\n\
 \r\n\
@@ -1376,6 +1388,18 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		securityGuard.setErrLogPath(errLogPath);
 	}
 
+	bool updateInfoXmlMustBeSigned = false;
+	if (isInList(FLAG_CHKCERT_XML, params))
+	{
+		updateInfoXmlMustBeSigned = true;
+	}
+
+	wstring signer_key_id_xml;
+	if (getParamValFromString(FLAG_CHKCERT_KEYID_XML, params, signer_key_id_xml))
+	{
+		securityGuard.setKeyIdXml(signer_key_id_xml);
+	}
+
 	// Object (gupParams) is moved here because we need app icon form configuration file
 	GupParameters gupParams(L"gup.xml");
 	appIconFile = gupParams.getSoftwareIcon();
@@ -1641,6 +1665,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		if (!getUpdateInfoSuccessful)
 		{
 			WRITE_LOG(GUP_LOG_FILENAME, L"return -1 in Npp Updater part: ", L"getUpdateInfo func failed.");
+			return -1;
+		}
+
+		if (updateInfoXmlMustBeSigned && !securityGuard.verifyXmlSignature(updateInfo))
+		{
 			return -1;
 		}
 
