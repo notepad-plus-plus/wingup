@@ -63,6 +63,7 @@ public:
 	void setDisplayName(const std::wstring& signer_display_name) { _signer_display_name = signer_display_name; }
 	void setSubjectName(const std::wstring& signer_subject) { _signer_subject = signer_subject; }
 	void setKeyId(const std::wstring& signer_key_id) { _signer_key_id = signer_key_id; }
+	void setKeyIdXml(const std::wstring& signer_key_id_xml) { _signer_key_id_xml = signer_key_id_xml; }
 	void setAuthorityKeyId(const std::wstring& authority_key_id) { _authority_key_id = authority_key_id; }
 
 	void setErrLogPath(std::wstring& errLogPath) { _errLogPath = errLogPath; }
@@ -70,15 +71,22 @@ public:
 
 	void writeSecurityError(const std::wstring& prefix, const std::wstring& log2write) const;
 
+	bool verifyXmlSignature(const std::string& xmlData, const std::wstring& trustedThumbprint = L"");
+
 private:
 	// Code signing certificate
 	std::wstring _signer_display_name; // = L"Notepad++"
 	std::wstring _signer_subject; // = L"C=FR, S=Ile-de-France, L=Saint Cloud, O=\"Notepad++\", CN=\"Notepad++\", E=don.h@free.fr"
 	std::wstring _signer_key_id; // = L"7B4D26B77F8269B987AC3E8EBC3899E1A4176DFA" => Should be UPPERCASE
+	std::wstring _signer_key_id_xml; // = L"7B4D26B77F8269B987AC3E8EBC3899E1A4176DFA" => Should be UPPERCASE
 	std::wstring _authority_key_id; // = L"8BDE0FA542DB39D347AF06A83AC9D09D421D1366" => Should be UPPERCASE
 
 	bool _doCheckRevocation = false;
 	bool _doCheckChainOfTrust = false;
+
+	// For xml signature verification
+	bool verifyXmlTrustedCertificate(PCCERT_CONTEXT pCertContext, const std::wstring& expectedThumbprint = L"");
+	bool verifyXmlCertificate(PCCERT_CONTEXT pCertContext);
 
 	std::wstring _errLogPath = L"%LOCALAPPDATA%\\WinGUp\\log\\securityError.log"; // By default, but overrideable
 };
