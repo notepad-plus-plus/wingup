@@ -968,7 +968,6 @@ bool downloadBinary(const wstring& urlFrom, const wstring& destTo, const wstring
 			curl_easy_setopt(curl, CURLOPT_PROXYPORT, proxyServerInfo.second);
 			curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
 		}
-		curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_ALLOW_BEAST | CURLSSLOPT_NO_REVOKE);
 
 		res = curl_easy_perform(curl);
 
@@ -1111,8 +1110,6 @@ bool getUpdateInfo(const string& info2get, const GupParameters& gupParams, const
 			curl_easy_setopt(curl, CURLOPT_PROXYPORT, proxyServer.getPort());
 			curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
 		}
-
-		curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_ALLOW_BEAST | CURLSSLOPT_NO_REVOKE);
 
 		res = curl_easy_perform(curl);
 
