@@ -330,13 +330,16 @@ bool SecurityGuard::verifyXmlTrustedCertificate(PCCERT_CONTEXT pCertContext, con
 
 bool SecurityGuard::verifyXmlSignature(const std::string& xmlData, const std::wstring& trustedThumbprint)
 {
-    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    ScopedCOMInit com;
+    if (!com.isInitialized())
+		return false;
+
     MSXML6::IXMLDOMDocument3Ptr pXMLDoc;
 
     try
     {
         // 1. Load XML document
-        hr = pXMLDoc.CreateInstance(__uuidof(MSXML6::DOMDocument60));
+        HRESULT hr = pXMLDoc.CreateInstance(__uuidof(MSXML6::DOMDocument60));
         if (FAILED(hr))
         {
             writeSecurityError(L"XML Signature - XML Error: ", L"Failed to create XML document");
