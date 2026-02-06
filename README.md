@@ -71,12 +71,12 @@ How to build it?
        `cd <your WinGUp source path>\curl\winbuild\` then run:
        `set WINBUILD_ACKNOWLEDGE_DEPRECATED=yes`
     3. Compile cURL by using one of the following commands, according the mode and architecture of WinGUp you want to build.
-       - x64 release: `nmake /f Makefile.vc mode=dll vc=15 RTLIBCFG=static MACHINE=x64`
-       - x64 debug: `nmake /f Makefile.vc mode=dll vc=15 RTLIBCFG=static DEBUG=yes MACHINE=x64`
-       - x86 release: `nmake /f Makefile.vc mode=dll vc=15 RTLIBCFG=static MACHINE=x86`
-       - x86 debug: `nmake /f Makefile.vc mode=dll vc=15 RTLIBCFG=static DEBUG=yes MACHINE=x86`
-       - ARM64 release: `nmake /f Makefile.vc mode=dll vc=15 RTLIBCFG=static MACHINE=ARM64`
-       - ARM64 debug: `nmake /f Makefile.vc mode=dll vc=15 RTLIBCFG=static DEBUG=yes MACHINE=ARM64`
+       - x64 release: `nmake /f Makefile.vc mode=static vc=15 RTLIBCFG=static MACHINE=x64`
+       - x64 debug: `nmake /f Makefile.vc mode=static vc=15 RTLIBCFG=static DEBUG=yes MACHINE=x64`
+       - x86 release: `nmake /f Makefile.vc mode=static vc=15 RTLIBCFG=static MACHINE=x86`
+       - x86 debug: `nmake /f Makefile.vc mode=static vc=15 RTLIBCFG=static DEBUG=yes MACHINE=x86`
+       - ARM64 release: `nmake /f Makefile.vc mode=static vc=15 RTLIBCFG=static MACHINE=ARM64`
+       - ARM64 debug: `nmake /f Makefile.vc mode=static vc=15 RTLIBCFG=static DEBUG=yes MACHINE=ARM64`
 
  * Step 2: Open [`vcproj\GUP.sln`](https://github.com/gup4win/wingup/blob/master/vcproj/GUP.sln) with VS2022.
  
