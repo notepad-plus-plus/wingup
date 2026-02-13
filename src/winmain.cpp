@@ -1474,16 +1474,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		::PathRemoveFileSpec(prog2LaunchDir);
 		wstring destPathRoot = params[1];
 
-		// clean
-		for (size_t i = 2; i < nbParam; ++i)
-		{
-			wstring destPath = destPathRoot;
-			::PathAppend(destPath, params[i]);
-			deleteFileOrFolder(destPath);
-		}
-
-
-
 #ifdef _DEBUG
 		// Don't check any thing in debug mode
 #else
@@ -1503,6 +1493,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			return -1;
 		}
 #endif
+
+		// clean
+		for (size_t i = 2; i < nbParam; ++i)
+		{
+			wstring destPath = destPathRoot;
+			::PathAppend(destPath, params[i]);
+			deleteFileOrFolder(destPath);
+		}
+
 		::ShellExecute(NULL, L"open", prog2Launch.c_str(), NULL, prog2LaunchDir, SW_SHOWNORMAL);
 
 		return 0;
