@@ -542,6 +542,22 @@ bool decompress(const wstring& zipFullFilePath, const wstring& unzipDestTo)
 		wstring extraitFullFilePath = unzipDestTo;
 		PathAppend(extraitFullFilePath, file2extrait);
 
+		// Zip slip fix: canonicalize and verify path stays within unzipDestTo
+		wchar_t canonicalDest[MAX_PATH];
+		wchar_t canonicalRoot[MAX_PATH];
+		if (!GetFullPathNameW(extraitFullFilePath.c_str(), MAX_PATH, canonicalDest, nullptr) ||
+		    !GetFullPathNameW(unzipDestTo.c_str(), MAX_PATH, canonicalRoot, nullptr))
+			return false;
+
+		// Ensure canonicalDest starts with canonicalRoot + backslash
+		wstring destStr(canonicalDest);
+		wstring rootStr(canonicalRoot);
+		if (rootStr.back() != L'\\') rootStr += L'\\';
+		if (destStr.substr(0, rootStr.size()) != rootStr)
+		{
+			// Path traversal attempt - skip this entry
+			continue;
+		}
 
 		// file2extrait be separated into an array
 		vector<wstring> strArray = tokenizeString(file2extrait, '/');
