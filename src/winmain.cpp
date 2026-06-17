@@ -1300,17 +1300,6 @@ bool isAppProcess(const wchar_t* wszAppMutex)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 {
-	/*
-	{
-		wstring destPath = L"C:\\tmp\\res\\TagsView";
-		wstring dlDest = L"C:\\tmp\\pb\\TagsView_Npp_03beta.zip";
-		bool isSuccessful = decompress(dlDest, destPath);
-		if (isSuccessful)
-		{
-			return 0;
-		}
-	}
-	*/
 	// Debug use - stop here so we can attach this process for debugging
 	//::MessageBox(NULL, L"And do something dirty to me ;)", L"Attach me!", MB_OK);
 
