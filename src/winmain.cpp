@@ -1621,9 +1621,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			wstring destPath = destRoot;
 			::PathAppend(destPath, params[i]);
 
-			// Overwrite conflicts are expected to be resolved by the caller (Notepad++)
-			// before invoking gup: only folder names the user confirmed should be passed here.
-			moveFileOrFolder(srcPath, destPath, false);
+			// Overwrite conflicts are already resolved by the caller (Notepad++) before
+			// invoking gup: every folder name reaching this point has been confirmed by
+			// the user, so it is safe (and necessary) to overwrite an existing destination.
+			moveFileOrFolder(srcPath, destPath, true);
 		}
 
 		safeLaunchAsUser(prog2Launch);
@@ -1673,9 +1674,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 			wstring destPath = destRoot;
 			::PathAppend(destPath, params[i]);
 
-			// Overwrite conflicts are expected to be resolved by the caller (Notepad++)
-			// before invoking gup: only folder names the user confirmed should be passed here.
-			moveFileOrFolder(srcPath, destPath, false);
+			// Overwrite conflicts are already resolved by the caller (Notepad++) before
+			// invoking gup: every folder name reaching this point has been confirmed by
+			// the user, so it is safe (and necessary) to overwrite an existing destination.
+			moveFileOrFolder(srcPath, destPath, true);
 		}
 
 		safeLaunchAsUser(prog2Launch);
