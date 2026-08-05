@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <windows.h>
 #include <fstream>
+#include <memory>
 #include <string>
 #include <sstream>
 #include <commctrl.h>
@@ -88,8 +89,7 @@ static constexpr wchar_t FLAG_HELP[] = L"--help";
 
 static constexpr wchar_t FLAG_UUZIP[] = L"-unzipTo";
 static constexpr wchar_t FLAG_CLEANUP[] = L"-clean";
-static constexpr wchar_t FLAG_DEACTIVATE[] = L"-deactivate";
-static constexpr wchar_t FLAG_ACTIVATE[] = L"-activate";
+static constexpr wchar_t FLAG_MOVEFOLDER[] = L"-moveFolder";
 
 static constexpr wchar_t FLAG_INFOURL[] = L"-infoUrl=";
 static constexpr wchar_t FLAG_FORCEDOMAIN[] = L"-forceDomain=";
@@ -174,15 +174,12 @@ gup -unzipTo [-clean] FOLDER_TO_ACTION ZIP_URL\r\n\
     ZIP_URL : The URL to download zip file.\r\n\
     FOLDER_TO_ACTION : The folder where we clean or/and unzip to.\r\n\
 \r\n\
-Plugin deactivate/activate mode:\r\n\
+Move folder mode:\r\n\
 \r\n\
-gup -deactivate \"appPath2Launch\" \"SRC_ROOT\" \"DEST_ROOT\" \"folder1\" \"folder2\" ...\r\n\
-gup -activate \"appPath2Launch\" \"SRC_ROOT\" \"DEST_ROOT\" \"folder1\" \"folder2\" ...\r\n\
+gup -moveFolder APP_PATH SRC_ROOT DEST_ROOT folderName1 [folderName2 ...]\r\n\
 \r\n\
-    -deactivate : Move the given plugin folders from SRC_ROOT (plugins dir)\r\n\
-                  to DEST_ROOT (plugins_disabled dir).\r\n\
-    -activate : Move the given plugin folders from SRC_ROOT (plugins_disabled dir)\r\n\
-                back to DEST_ROOT (plugins dir).\r\n\
+    -moveFolder: Move the given folder names from SRC_ROOT to DEST_ROOT.\r\n\
+    APP_PATH: application path to launch after the operation.\r\n\
 	";
 
 HFONT hCmdLineEditFont = nullptr;
@@ -533,21 +530,21 @@ bool moveFileOrFolder(const wstring& fFrom, const wstring& fTo, bool overwriteIf
 	}
 
 	auto lenFrom = fFrom.length();
-	wchar_t* actionFrom = new wchar_t[lenFrom + 2];
-	lstrcpy(actionFrom, fFrom.c_str());
+	auto actionFrom = std::make_unique<wchar_t[]>(lenFrom + 2);
+	lstrcpy(actionFrom.get(), fFrom.c_str());
 	actionFrom[lenFrom] = 0;
 	actionFrom[lenFrom + 1] = 0;
 
 	auto lenTo = fTo.length();
-	wchar_t* actionTo = new wchar_t[lenTo + 2];
-	lstrcpy(actionTo, fTo.c_str());
+	auto actionTo = std::make_unique<wchar_t[]>(lenTo + 2);
+	lstrcpy(actionTo.get(), fTo.c_str());
 	actionTo[lenTo] = 0;
 	actionTo[lenTo + 1] = 0;
 
 	SHFILEOPSTRUCT fileOpStruct = { 0 };
 	fileOpStruct.hwnd = NULL;
-	fileOpStruct.pFrom = actionFrom;
-	fileOpStruct.pTo = actionTo;
+	fileOpStruct.pFrom = actionFrom.get();
+	fileOpStruct.pTo = actionTo.get();
 	fileOpStruct.wFunc = FO_MOVE;
 	fileOpStruct.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_ALLOWUNDO;
 	fileOpStruct.fAnyOperationsAborted = false;
@@ -562,8 +559,6 @@ bool moveFileOrFolder(const wstring& fFrom, const wstring& fTo, bool overwriteIf
 		WRITE_LOG(GUP_LOG_FILENAME, L"moveFileOrFolder, SHFileOperation failed with error code: ", std::to_wstring(res).c_str());
 	}
 
-	delete[] actionFrom;
-	delete[] actionTo;
 	return (res == 0);
 };
 
@@ -1379,8 +1374,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 	bool isHelp = isInList(FLAG_HELP, params);
 	bool isCleanUp = isInList(FLAG_CLEANUP, params);
 	bool isUnzip = isInList(FLAG_UUZIP, params);
-	bool isDeactivate = isInList(FLAG_DEACTIVATE, params);
-	bool isActivate = isInList(FLAG_ACTIVATE, params);
+	bool isMoveFolder = isInList(FLAG_MOVEFOLDER, params);
 	
 	getParamVal('v', params, version);
 	getParamVal('p', params, customParam);
@@ -1574,13 +1568,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		return 0;
 	}
 
-	// deactivate plugin(s): move folders from plugins dir to plugins_disabled dir
-	// gup.exe -deactivate "appPath2Launch" "plugins_root" "disabled_root" "fold1" "fold2" ...
-	if (isDeactivate)
+	// move folder(s) from SRC_ROOT to DEST_ROOT
+	// gup.exe -moveFolder "appPath2Launch" "src_root" "dest_root" "fold1" "fold2" ...
+	if (isMoveFolder)
 	{
 		if (nbParam < 4)
 		{
-			WRITE_LOG(GUP_LOG_FILENAME, L"-1 in plugin updater's part - if (isDeactivate): ", L"nbParam < 4");
+			WRITE_LOG(GUP_LOG_FILENAME, L"-1 in plugin updater's part - if (isMoveFolder): ", L"nbParam < 4");
 			return -1;
 		}
 
@@ -1596,14 +1590,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 
 		if (!securityGuard4PluginsInstall.initFromSelfCertif())
 		{
-			securityGuard.writeSecurityError(L"Above certificate init error from \"gup -deactivate\" (deactivate plugins)", L"");
+			securityGuard.writeSecurityError(L"Above certificate init error from \"gup -moveFolder\" (move folder)", L"");
 			return -1;
 		}
 
 		bool isSecured = securityGuard4PluginsInstall.verifySignedBinary(prog2Launch.c_str());
 		if (!isSecured)
 		{
-			securityGuard.writeSecurityError(L"Above certificate verification error from \"gup -deactivate\" (deactivate plugins)", L"");
+			securityGuard.writeSecurityError(L"Above certificate verification error from \"gup -moveFolder\" (move folder)", L"");
 			return -1;
 		}
 #endif
@@ -1612,59 +1606,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpszCmdLine, int)
 		{
 			::CreateDirectory(destRoot.c_str(), NULL);
 		}
-
-		for (size_t i = 3; i < nbParam; ++i)
-		{
-			wstring srcPath = srcRoot;
-			::PathAppend(srcPath, params[i]);
-
-			wstring destPath = destRoot;
-			::PathAppend(destPath, params[i]);
-
-			// Overwrite conflicts are already resolved by the caller (Notepad++) before
-			// invoking gup: every folder name reaching this point has been confirmed by
-			// the user, so it is safe (and necessary) to overwrite an existing destination.
-			moveFileOrFolder(srcPath, destPath, true);
-		}
-
-		safeLaunchAsUser(prog2Launch);
-
-		return 0;
-	}
-
-	// activate plugin(s): move folders from plugins_disabled dir back to plugins dir
-	// gup.exe -activate "appPath2Launch" "disabled_root" "plugins_root" "fold1" "fold2" ...
-	if (isActivate)
-	{
-		if (nbParam < 4)
-		{
-			WRITE_LOG(GUP_LOG_FILENAME, L"-1 in plugin updater's part - if (isActivate): ", L"nbParam < 4");
-			return -1;
-		}
-
-		wstring prog2Launch = params[0];
-		wstring srcRoot = params[1];
-		wstring destRoot = params[2];
-
-#ifdef _DEBUG
-		// Don't check any thing in debug mode
-#else
-		// Check signature of the launched program, with the same certif as gup.exe
-		SecurityGuard securityGuard4PluginsInstall;
-
-		if (!securityGuard4PluginsInstall.initFromSelfCertif())
-		{
-			securityGuard.writeSecurityError(L"Above certificate init error from \"gup -activate\" (activate plugins)", L"");
-			return -1;
-		}
-
-		bool isSecured = securityGuard4PluginsInstall.verifySignedBinary(prog2Launch.c_str());
-		if (!isSecured)
-		{
-			securityGuard.writeSecurityError(L"Above certificate verification error from \"gup -activate\" (activate plugins)", L"");
-			return -1;
-		}
-#endif
 
 		for (size_t i = 3; i < nbParam; ++i)
 		{
