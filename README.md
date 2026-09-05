@@ -65,8 +65,9 @@ How to build it?
 
  * Step 1: You have to build cURL before building WinGUp:
 
+    0. Install [CMake](https://cmake.org/), if it is not yet installed in your system.
     1. Open Visual Studio Native Tool Command.
-    2. Go to WinGUp source directory and run "buildCurlAll.bat".
+    2. Go to WinGUp source root directory and run "buildCurlAll.bat".
 
  * Step 2: Open [`vcproj\GUP.sln`](https://github.com/gup4win/wingup/blob/master/vcproj/GUP.sln) with VS2022.
  
