@@ -1,14 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
 <!--
-    Copyright 2007 Don HO <don.h@free.fr>
-	
-    This file is part of GUP.
+    Copyright 2021 Don HO <don.h@free.fr>
 
-    GUP is free software: you can redistribute it and/or modify
+    This file is part of GUP for Notepad++.
+
+    GUP for Notepad++ is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    GUP is distributed in the hope that it will be useful,
+    GUP for Notepad++ is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
@@ -16,25 +17,26 @@
     You should have received a copy of the GNU Lesser General Public License
     along with GUP.  If not, see <http://www.gnu.org/licenses/>.
 -->
-<!-- This file is optional.
-Use this file to set your proxy settings if need.
--->
-<?xml version="1.0" encoding="UTF-8" ?>
-<GUP_NativeLanguage name="Malayalam">
+
+<!-- This file is optional. -->
+<GUP_NativeLangue name="Malayalam" version="5.1.3">
 	<PopupMessages>
-		<!-- <MSGID_NOUPDATE>No update is available.</MSGID_NOUPDATE> -->
-		<MSGID_NOUPDATE>????? ????????? ????????.</MSGID_NOUPDATE>
-				
-		<!-- <MSGID_UPDATEAVAILABLE>An update package is available, do you want to download it?</MSGID_UPDATEAVAILABLE> -->
-		<MSGID_UPDATEAVAILABLE>??? ????????? ????????. ??? ??????? ?????? ????????? ????????</MSGID_UPDATEAVAILABLE>
+		<MSGID_UPDATETITLE content="Notepad++ അപ്ഡേറ്റ്" />
+		<MSGID_UPDATEAVAILABLE content="ഒരു അപ്ഡേറ്റ് ലഭ്യമാണ്. അത് ഡൗൺലോഡ് ചെയ്ത് ഇൻസ്റ്റാൾ ചെയ്യണോ?" />
+		<MSGID_VERSIONCURRENT content="നിലവിലെ പതിപ്പ്:" />
+		<MSGID_VERSIONNEW content="ലഭ്യമായ പതിപ്പ്:" />
+		<MSGID_UPDATEYES content="അതെ" />
+		<MSGID_UPDATEYESSILENT content="അതെ (വീണ്ടും ചോദിക്കരുത്)" />
+		<MSGID_UPDATENo content="ഇല്ല" />
+		<MSGID_UPDATENEVER content="ഒരിക്കലും വേണ്ട" />
 
-		<!-- <MSGID_DOWNLOADSTOPPED>Download is stopped by user. Update is aborded.</MSGID_DOWNLOADSTOPPED> -->
-		<MSGID_DOWNLOADSTOPPED>??????? ?????????? ???????????????????. ????????? ?????????.</MSGID_DOWNLOADSTOPPED>
-		
-		<!-- <MSGID_CLOSEAPP> is opened.\rUpdater will close it in order to process the installation.\rContinue?</MSGID_CLOSEAPP> -->
-		<MSGID_CLOSEAPP>????????? ????????? ??????????????? ??????????? ?????????. ????????</MSGID_CLOSEAPP>
-
-		<!-- <MSGID_ABORTORNOT>Do you want to abort update download?</MSGID_ABORTORNOT> -->
-		<MSGID_ABORTNOT>????????? ??????? ??????????? ???????????</MSGID_ABORTNOT>
+		<MSGID_DOWNLOADPAGE content="ഡൗൺലോഡ് പേജ് തുറക്കുക" />
+		<MSGID_MOREINFO content="കൂടുതൽ വിവരങ്ങൾ" />
+		<!-- $MSGID_DOWNLOADPAGE$ and $MSGID_MOREINFO$ are place holders, don't translate them -->
+		<MSGID_GOTODOWNLOADPAGETEXT content="നിലവിൽ അപ്ഡേറ്റ് ലഭ്യമല്ല.&#xD;&#xD;അല്ലെങ്കിൽ ഏറ്റവും പുതിയ പതിപ്പ് ഇതുവരെ പൊതുജനങ്ങൾക്കായി പുറത്തിറക്കിയിട്ടില്ല ($MSGID_MOREINFO$).&#xD;&#xD;Notepad++ സ്വമേധയാ അപ്ഡേറ്റ് ചെയ്യാൻ $MSGID_DOWNLOADPAGE$ തുറക്കുക." />
+		<MSGID_DOWNLOADSTOPPED content="ഡൗൺലോഡ് ഉപയോക്താവ് നിർത്തിയിരിക്കുന്നു. അപ്ഡേറ്റ് റദ്ദാക്കി." />
+		<MSGID_CLOSEAPP content=" പ്രവർത്തിച്ചുകൊണ്ടിരിക്കുകയാണ്.&#xD;അപ്ഡേറ്റ് ഇൻസ്റ്റാൾ ചെയ്യുന്നതിനായി അപ്ഡേറ്റർ ആപ്ലിക്കേഷൻ അടയ്ക്കും.&#xD;&#xD;തുടരണോ?" />
+		<MSGID_ABORTORNOT content="അപ്ഡേറ്റ് ഡൗൺലോഡ് ചെയ്യുന്നത് റദ്ദാക്കണോ?" />
+		<MSGID_UNZIPFAILED content="അൺസിപ്പ് ചെയ്യുന്നത് പരാജയപ്പെട്ടു: ആവശ്യമായ ഉപയോക്തൃ അനുമതികൾ ഇല്ലാതിരിക്കാം അല്ലെങ്കിൽ ആർക്കൈവ് കേടായിരിക്കാം." />
 	</PopupMessages>
 </GUP_NativeLangue>
